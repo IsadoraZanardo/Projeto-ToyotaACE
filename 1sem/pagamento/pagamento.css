@@ -1,0 +1,72 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f4f4f4;
+    color: #333;
+}
+
+header {
+    background-color: #dc0909;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.container {
+    width: 100%;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+section {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.titulo {
+    color: #dc0909;
+    margin-bottom: 15px;
+}
+
+ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+ul li {
+    padding: 5px 0;
+    font-size: 16px;
+}
+
+.carro img {
+    width: 100%;
+    max-width: 500px;
+    display: block;
+    margin: 15px auto;
+    border-radius: 10px;
+}
+
+.descricao-carro {
+    text-align: center;
+    font-style: italic;
+    margin-top: 10px;
+    color: #555;
+}
+
+.red {
+    text-decoration: underline;
+    color: #d32f2f;
+}
+
+footer {
+    background: #222;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    width: 100%;
+}
+
