@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACE Toyota</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+  <link rel="stylesheet" href="css/pedido.css">
+</head>
+
+<body>
+
+  <!-- Navbar fixa e esticada de ponta a ponta -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center" href="index.html">
+        <img src="image/coplo-removebg-preview.png" alt="ACE Toyota Logo" style="height: 50px; margin-right: 10px;">
+        <span>TOYOTA ACE</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="https://www.toyota.com.br/meu-toyota/garantia-toyota-10">Garantia Toyota 10</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Serviços</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="pedido.html">Pedido</a></li>
+              <li><a class="dropdown-item" href="agendamento.html">Agendamento</a></li>
+            </ul>
+          </li>
+          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+    <!-- Imagem Central -->
+    <div class="text-center">
+      <img class="car-img img-fluid" src="image/Toyota_Corolla_Altis_Hybrid_Premium_2024__preço__ficha_técnica__equipamentos_e_mais-removebg-preview.png" alt="Foto do carro">
+    </div>
+
+    <!-- Ficha Técnica -->
+    <section id="pesquisa" class="text-center mb-5">
+      <a href="#" id="toggleFicha" class="spec-link">Ficha Técnica ></a>
+      <div id="fichaTecnica" class="ficha mt-4" style="display: none;">
+        <p><strong>Motor:</strong> 1.8L 2021</p>
+        <p><strong>Potência:</strong> 122 cv</p>
+        <p><strong>Consumo:</strong> 10,9 km/l (cidade), 9,9 km/l (estrada)</p>
+        <p><strong>Portas:</strong> 5</p>
+        <p><strong>Válvula por cilindro:</strong> 4</p>
+      </div>
+    </section>
+ <!-- CONTEÚDO PRINCIPAL COM CONTAINER BRANCO -->
+  <div class="main-content container my-5 p-4 rounded">
+    <!-- Mensagem dinâmica -->
+    <div id="mensagem" class="text-center my-4 fs-5"></div>
+
+    <!-- Etapas -->
+    <section class="steps text-center my-4">
+      <h2>100% Concluído</h2>
+      <div class="step active mb-2"><span class="palavra" onclick="mostrarMensagem('Pagamento: Pagamento realizado com sucesso.')">Pagamento</span></div>
+      <div class="step active mb-2"><span class="palavra" onclick="mostrarMensagem('Produção: Finalizada.')">Produção</span></div>
+      <div class="step active mb-2"><span class="palavra" onclick="mostrarMensagem('Teste: Os testes foram realizados garantindo a qualidade do veículo.')">Teste</span></div>
+      <div class="step active mb-2"><span class="palavra" onclick="mostrarMensagem('Entrega: Veículo já entregue para o cliente. Parabéns, agradecemos pela sua preferência.')">Entrega</span></div>
+    </section>
+
+  </div>
+
+  <script>
+    function mostrarMensagem(texto) {
+      document.getElementById('mensagem').textContent = texto;
+    }
+
+    document.getElementById('toggleFicha').addEventListener('click', function (e) {
+      e.preventDefault();
+      const ficha = document.getElementById('fichaTecnica');
+      ficha.style.display = (ficha.style.display === 'none' || ficha.style.display === '') ? 'block' : 'none';
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+  <footer>
+    <p>&copy; 2025 Toyota do Brasil - Todos os direitos reservados</p>
+  </footer>
+</body>
+
+</html>

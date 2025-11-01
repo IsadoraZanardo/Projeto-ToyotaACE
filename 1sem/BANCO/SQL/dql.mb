@@ -1,0 +1,25 @@
+```sql
+SELECT * FROM Cliente;
+
+-- CONSULTAR PEDIDOS DO CLIENTE
+SELECT p.ID_Pedido, c.Modelo, p.DataPedido, p.StatusPedido
+FROM Pedido p
+JOIN Carro c ON p.ID_Carro = c.ID_Carro
+WHERE p.ID_Cliente = 1;
+
+-- CONSULTAR AVALIAÇÕES DOS CARROS
+SELECT a.Estrelas, a.Comentario, cl.Nome AS Cliente, ca.Modelo
+FROM Avaliacao a
+JOIN Cliente cl ON a.ID_Cliente = cl.ID_Cliente
+JOIN Carro ca ON a.ID_Carro = ca.ID_Carro;
+
+-- CONSULTAR AGENDAMENTOS DE UM CLIENTE
+SELECT ag.DataHora, s.NomeServico, c.Modelo
+FROM Agendamento ag
+JOIN Servico s ON ag.ID_Servico = s.ID_Servico
+JOIN Carro c ON ag.ID_Carro = c.ID_Carro
+WHERE ag.ID_Cliente = 1;
+
+-- CONSULTAR CARROS DISPONÍVEIS
+SELECT Modelo, Versao, Ano, Motorizacao FROM Carro;
+```

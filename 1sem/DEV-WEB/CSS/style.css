@@ -1,0 +1,251 @@
+    .carousel-container {
+      max-width: 600px;
+      margin: 20px auto;
+    }
+
+    /* Personalizar setas do carrossel */
+    .carousel-control-prev-icon,
+    .carousel-control-next-icon {
+      background-color: black;
+      background-size: 100% 100%;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+    }
+
+    /* Texto do carrossel em preto */
+    .carousel-caption h5,
+    .carousel-caption p {
+      color: black;
+    }
+
+    /* Navbar otimizada */
+    .navbar {
+      background-color: #f8f9fa !important;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .navbar-brand img {
+      height: 50px;
+      margin-right: 10px;
+    }
+
+    .navbar-brand span {
+      font-weight: bold;
+      color: #000;
+    }
+
+    .nav-link {
+      color: #333 !important;
+      font-weight: 500;
+      margin-right: 15px;
+    }
+
+    .nav-link:hover {
+      color: #d32f2f !important;
+    }
+
+    .form-control {
+      border-radius: 0.375rem;
+    }
+
+    .btn-outline-success {
+      color: #fff;
+      background-color: #d32f2f;
+      border-color: #d32f2f;
+    }
+
+    .btn-outline-success:hover {
+      background-color: #b71c1c;
+      border-color: #b71c1c;
+    }
+    /* Acompanhamento meu carro */
+.wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+  gap: 20px;
+}
+
+/* Container texto à esquerda */
+.cont {
+  background-color: #eceaea;
+  padding: 20px;
+  border-radius: 8px;
+  color: #333;
+  flex: 1 1 45%;
+  max-width: 45%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  font-size: clamp(1rem, 1.5vw, 1.1rem);
+  line-height: 1.4;
+}
+
+.titulo {
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.modelo {
+  font-weight: 600;
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  margin-bottom: 10px;
+}
+
+.status {
+  font-size: clamp(0.9rem, 1.4vw, 1.1rem);
+  margin-bottom: 10px;
+}
+
+.btn {
+  align-self: flex-end;
+  background-color: #ff0100;
+  color: rgb(15, 13, 13);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+  margin-top: auto;
+}
+
+.btn:hover {
+  background-color: #c91717;
+}
+
+/* Imagem do carro */
+.car-image {
+  flex: 1 1 100%;
+  max-width: 45%;
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  height: auto;
+}
+
+/* Container de texto com avaliação - fica abaixo dos dois anteriores */
+.info-text {
+  flex: 1 1 100%;
+  max-width: 100%;
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 40px;
+  font-size: clamp(1rem, 1.5vw, 1.1rem);
+  box-sizing: border-box;
+}
+
+.info-titles {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: clamp(1.1rem, 1.8vw, 1.3rem);
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.info-content {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.pontos,
+.avaliacao {
+  width: 48%;
+}
+
+.pontos p,
+.avaliacao p {
+  margin: 4px 0;
+}
+/* Sessão final com pilares */
+.section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  max-width: none;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.left-box {
+  width: 60%;
+  text-align: left;
+}
+
+.right-box {
+  width: 35%;
+  font-size: 1.2em;
+}
+
+.highlight {
+  font-weight: bold;
+}
+
+h2 {
+  margin-top: 0;
+}
+ .linha-fina {
+      border: none;
+      border-top: 3px solid #f50606; 
+      margin: 40px 0;            
+      width: 100%;                /* Ocupa toda a largura do container */
+    }
+footer {
+    background: #222;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    width: 100%;
+    margin-top: 40px;
+}
+/* Responsividade para telas menores */
+@media (max-width: 768px) {
+  .wrapper {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .cont, .car-image, .info-text {
+    width: 90%;
+    max-width: none;
+  }
+
+  .btn {
+    align-self: stretch;
+    text-align: center;
+  }
+
+  .info-text {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .section {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .left-box,
+  .right-box {
+    width: 90%;
+    text-align: center;
+  }
+  footer {
+    background: #222;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    margin-top: 40px;
+}
+}

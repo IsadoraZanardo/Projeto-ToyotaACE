@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #cccccc;
+  color: #023047;
+}
+
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.formLogin {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.formLogin h1 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.formLogin p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+.formLogin label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.formLogin input[type="email"],
+.formLogin input[type="password"] {
+  padding: 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  outline: none;
+  transition: border 0.2s ease;
+}
+
+.formLogin input:focus {
+  border-color: #f72585;
+}
+
+.formLogin a {
+  font-size: 13px;
+  color: #555;
+  text-decoration: none;
+  margin-bottom: 20px;
+  transition: color 0.2s;
+}
+
+.formLogin a:hover {
+  color: #f72585;
+}
+
+.btn {
+  background-color: #e50000;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+  background-color: #ff0676;
+  transform: scale(1.05);
+}
+
+/* Responsividade extra para telas menores */
+@media (max-width: 480px) {
+  .formLogin {
+    padding: 1.5rem;
+  }
+
+  .formLogin h1 {
+    font-size: 1.5rem;
+  }
+
+  .formLogin p,
+  .formLogin label,
+  .formLogin a {
+    font-size: 13px;
+  }
+}
