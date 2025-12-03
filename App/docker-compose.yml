@@ -17,6 +17,22 @@ services:
     depends_on:
       - postgres
 
+  frontend:
+    build:
+      context: ./Front_toyota_ace
+      dockerfile: Dockerfile
+    container_name: frontend_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # URL usada pelo frontend dentro do docker
+      VITE_API_URL: http://backend:5000
+      # para Next.js (se existir)
+      NEXT_PUBLIC_API_URL: http://backend:5000
+    depends_on:
+      - backend
+  
   postgres:
     image: postgres:16
     container_name: postgres_db
