@@ -34,9 +34,11 @@ export default function Login() {
         </button>
 
         
-        <button className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md text-sm font-medium transition">
-          Acessar
-        </button>
+<a href="/homepage">
+  <button className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md text-sm font-medium transition">
+    Acessar
+  </button>
+</a>
       </div>
     </div>
   );
