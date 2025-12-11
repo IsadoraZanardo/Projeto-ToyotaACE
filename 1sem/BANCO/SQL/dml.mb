@@ -1,0 +1,29 @@
+--INSERIr LOGIN
+ CLIENTES
+INSERT INTO Cliente (Nome, CPF, Telefone, Email, Endereco)
+VALUES ('Ana Souza', '123.456.789-00', '(11) 91234-5678', 'ana@gmail.com', 'Rua A, 100');
+
+-- INSERIr LOGIN
+INSERT INTO Login (Usuario, SenhaHash, ID_Cliente)
+VALUES ('anasouza', 'hash_da_senha_123', 1);
+
+--INSERIr LOGIN
+ CARROS
+INSERT INTO Carro (Modelo, Versao, Ano, Motorizacao, Foto, Destaques)
+VALUES ('Corolla', 'Altis Premium', 2024, 'Híbrido', 'foto_corolla.jpg', 'Economia, Segurança');
+
+-- INSERIr PEDIDO
+INSERT INTO Pedido (DataPedido, StatusPedido, ID_Cliente, ID_Carro)
+VALUES ('2025-06-16', 'Em aprovação', 1, 1);
+
+-- INSERIr AVALIAÇÃO
+INSERT INTO Avaliacao (Estrelas, Comentario, PontosFortes, ID_Cliente, ID_Carro)
+VALUES (5, 'Excelente desempenho e consumo!', 'Motorização híbrida, conforto', 1, 1);
+
+-- INSERIr SERVIÇO
+INSERT INTO Servico (NomeServico, Descricao, DuracaoEstimada, Preco)
+VALUES ('Revisão de 10.000km', 'Revisão padrão com troca de óleo', '01:00:00', 399.90);
+
+-- INSERIr AGENDAMENTO
+INSERT INTO Agendamento (DataHora, ID_Cliente, ID_Servico, ID_Carro)
+VALUES ('2025-06-20 14:00:00', 1, 1, 1);

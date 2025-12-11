@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -34,3 +35,12 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+=======
+<h3>Repositório dedicado ao Projeto Integrador "Toyota ACE" - Curso Superior de Análise e Desenvolvimento de Sistemas</h3>
+
+_"O Toyota ACE (Acessibilidade, Conectividade e Experiencia) é uma aplicação desktop e mobile focada na experiência do usuário Toyota. O sistema pode ser acessado por colaboradores e clientes da marca, podendo visualizar, agendar, modificar e acompanhar produtos e serviços."_
+
+Cada diretório pricipal contém o número do semestre; dentro desses, existem pastas nomeadas com o nome das disciplinas.
+
+Integrantes: Aline, Cecilia, Graciele, Isabelle e Isadora
+>>>>>>> cf9dafd04657319eb1d85b2c3042234eadd481a3
