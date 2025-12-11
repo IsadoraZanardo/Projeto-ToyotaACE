@@ -63,7 +63,7 @@ export default function AcessoCardFixo() {
                     {/* Botão de Acesso */}
                     <button 
                         onClick={handleAcessar}
-                        className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 text-white py-3 rounded-lg text-base font-semibold transition duration-300 shadow-md"
+                        className=" bg-red-600 active:bg-red-800  py-3 rounded-lg text-base font-semibold transition duration-300 shadow-md"
                     >
                         Acessar
                     </button>
@@ -71,7 +71,7 @@ export default function AcessoCardFixo() {
 
                 {/* 2. IMAGEM CENTRAL (50%) */}
                 {/* Alterado: bg-gray-100 -> bg-white (para remover o cinza atrás do carro) */}
-                <div className='w-1/2 flex items-center justify-center p-4 bg-white rounded-lg'>
+                <div className='w-1/2 flex items-center justify-center p-4 rounded-lg'>
                     <MeuCard
                         src={item.imageUrl}
                         alt={item.model}

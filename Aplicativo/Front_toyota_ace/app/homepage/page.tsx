@@ -4,7 +4,6 @@ import Backdrop from "../componentes/Backdrop"
 import Card from "../componentes/ui/Card"
 import Login from "../login/page"
 import Rodape from "../componentes/ui/Rodape"
-import MenuBotoes from "../componentes/MeusBotoes"
 
 export default function Home(){
   return(
