@@ -6732,19 +6732,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Isabelle Nastri\\.nuget\\packages\\": {}
+    "C:\\Users\\Isadora Zanardo\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Isabelle Nastri\\Downloads\\Projeto-ToyotaACE\\App\\BackEndAPI\\BackEndAPI.csproj",
+      "projectUniqueName": "C:\\Users\\Isadora Zanardo\\Desktop\\Projeto-ToyotaACE-main\\Projeto-ToyotaACE-main\\App\\Front_toyota_ace\\app\\BackEndAPI\\BackEndAPI.csproj",
       "projectName": "BackEndAPI",
-      "projectPath": "C:\\Users\\Isabelle Nastri\\Downloads\\Projeto-ToyotaACE\\App\\BackEndAPI\\BackEndAPI.csproj",
-      "packagesPath": "C:\\Users\\Isabelle Nastri\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Isabelle Nastri\\Downloads\\Projeto-ToyotaACE\\App\\BackEndAPI\\obj\\",
+      "projectPath": "C:\\Users\\Isadora Zanardo\\Desktop\\Projeto-ToyotaACE-main\\Projeto-ToyotaACE-main\\App\\Front_toyota_ace\\app\\BackEndAPI\\BackEndAPI.csproj",
+      "packagesPath": "C:\\Users\\Isadora Zanardo\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Isadora Zanardo\\Desktop\\Projeto-ToyotaACE-main\\Projeto-ToyotaACE-main\\App\\Front_toyota_ace\\app\\BackEndAPI\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Isabelle Nastri\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\Isadora Zanardo\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net9.0"
