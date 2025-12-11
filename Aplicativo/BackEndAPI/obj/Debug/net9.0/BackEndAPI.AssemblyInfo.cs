@@ -13,7 +13,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BackEndAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+<<<<<<< Updated upstream:Aplicativo/BackEndAPI/obj/Debug/net9.0/BackEndAPI.AssemblyInfo.cs
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d883523f3bc706f6e76c036ab18c251ca3f2c4a0")]
+=======
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cf9dafd04657319eb1d85b2c3042234eadd481a3")]
+>>>>>>> Stashed changes:App/BackEndAPI/obj/Debug/net9.0/BackEndAPI.AssemblyInfo.cs
 [assembly: System.Reflection.AssemblyProductAttribute("BackEndAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BackEndAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
