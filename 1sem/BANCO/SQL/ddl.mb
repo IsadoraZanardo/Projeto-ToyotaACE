@@ -1,0 +1,105 @@
+CREATE TABLE Empresa (
+    ID_Empresa INT PRIMARY KEY AUTO_INCREMENT,
+    Nome VARCHAR(100),
+    CNPJ VARCHAR(18),
+    Endereco VARCHAR(200),
+    Telefone VARCHAR(20),
+    Email VARCHAR(100)
+);
+
+
+CREATE TABLE Departamento (
+    ID_Departamento INT PRIMARY KEY AUTO_INCREMENT,
+    Nome VARCHAR(100),
+    Area VARCHAR(100),
+    ID_Empresa INT,
+    FOREIGN KEY (ID_Empresa) REFERENCES Empresa(ID_Empresa)
+);
+
+
+CREATE TABLE Funcionario (
+    ID_Funcionario INT PRIMARY KEY AUTO_INCREMENT,
+    Nome VARCHAR(100),
+    Cargo VARCHAR(50),
+    Salario DECIMAL(10,2),
+    Telefone VARCHAR(20),
+    EmailCorporativo VARCHAR(100),
+    DataAdmissao DATE,
+    ID_Departamento INT,
+    FOREIGN KEY (ID_Departamento) REFERENCES Departamento(ID_Departamento)
+);
+
+
+CREATE TABLE Cliente (
+    ID_Cliente INT PRIMARY KEY AUTO_INCREMENT,
+    Nome VARCHAR(100),
+    CPF VARCHAR(14),
+    Telefone VARCHAR(20),
+    Email VARCHAR(100),
+    Endereco VARCHAR(200)
+);
+
+
+CREATE TABLE Login (
+    ID_Login INT PRIMARY KEY AUTO_INCREMENT,
+    Usuario VARCHAR(50) UNIQUE,
+    SenhaHash VARCHAR(255),
+    ID_Cliente INT UNIQUE,
+    FOREIGN KEY (ID_Cliente) REFERENCES Cliente(ID_Cliente)
+);
+
+CREATE TABLE Carro (
+    ID_Carro INT PRIMARY KEY AUTO_INCREMENT,
+    Modelo VARCHAR(100),
+    Versao VARCHAR(100),
+    Ano INT,
+    Motorizacao VARCHAR(50),
+    Foto TEXT,
+    Destaques TEXT
+);
+
+
+CREATE TABLE Pedido (
+    ID_Pedido INT PRIMARY KEY AUTO_INCREMENT,
+    DataPedido DATE,
+    StatusPedido VARCHAR(100),
+    ID_Cliente INT,
+    ID_Carro INT,
+    FOREIGN KEY (ID_Cliente) REFERENCES Cliente(ID_Cliente),
+    FOREIGN KEY (ID_Carro) REFERENCES Carro(ID_Carro)
+);
+
+
+CREATE TABLE Avaliacao (
+    ID_Avaliacao INT PRIMARY KEY AUTO_INCREMENT,
+    Estrelas INT CHECK (Estrelas BETWEEN 1 AND 5),
+    Comentario TEXT,
+    PontosFortes TEXT,
+    ID_Cliente INT,
+    ID_Carro INT,
+    FOREIGN KEY (ID_Cliente) REFERENCES Cliente(ID_Cliente),
+    FOREIGN KEY (ID_Carro) REFERENCES Carro(ID_Carro)
+);
+
+
+CREATE TABLE Servico (
+    ID_Servico INT PRIMARY KEY AUTO_INCREMENT,
+    NomeServico VARCHAR(100),
+    Descricao TEXT,
+    DuracaoEstimada TIME,
+    Preco DECIMAL(10,2)
+);
+
+
+CREATE TABLE Agendamento (
+    ID_Agendamento INT PRIMARY KEY AUTO_INCREMENT,
+    DataHora DATETIME,
+    ID_Cliente INT,
+    ID_Servico INT,
+    ID_Carro INT,
+    ID_Funcionario INT,
+    FOREIGN KEY (ID_Cliente) REFERENCES Cliente(ID_Cliente),
+    FOREIGN KEY (ID_Servico) REFERENCES Servico(ID_Servico),
+    FOREIGN KEY (ID_Carro) REFERENCES Carro(ID_Carro),
+    FOREIGN KEY (ID_Funcionario) REFERENCES Funcionario(ID_Funcionario)
+);
