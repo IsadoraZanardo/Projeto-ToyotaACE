@@ -36,20 +36,21 @@ export default function AcessoCardFixo() {
 
     const item = FIXED_ITEM_DATA;
 
+
     return (
         // Container Principal: Fundo Branco (ou Transparente) para remover o cinza da tela
         // Alterado: bg-gray-100 -> bg-white
-        <div className="flex justify-center items-center min-h-screen bg-white p-6 font-sans"> 
+        <div className="flex justify-center items-center font-sans"> 
             
             {/* Card Content: Fundo branco já definido */}
-            <div className="flex w-full max-w-6xl shadow-2xl rounded-2xl overflow-hidden p-5 space-x-8">
+            <div className="flex w-full max-w-6xl shadow-2xl rounded-2xl overflow-hidden p-5 items-center h-full">
                 
                 {/* 1. TEXTO ESQUERDO (25%) */}
                 <div className='flex flex-col w-1/4 justify-between py-4'>
                     <h2 className='text-3xl font-extrabold text-red-600 mb-6'>Olá, Fulano de Tal!</h2>
                     
                     {/* CariBox de Informação - Fundo cinza suave mantido aqui para contraste interno */}
-                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 mb-6 text-sm">
+                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 mb-6 text-sm items-center">
                         <h3 className="font-semibold text-lg mb-2">CariBox</h3>
                         <p className="text-gray-700">{item.model}</p>
                         <ul className="list-disc list-inside mt-2 text-gray-500 pl-4">
@@ -60,13 +61,6 @@ export default function AcessoCardFixo() {
                         </ul>
                     </div>
 
-                    {/* Botão de Acesso */}
-                    <button 
-                        onClick={handleAcessar}
-                        className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 text-white py-3 rounded-lg text-base font-semibold transition duration-300 shadow-md"
-                    >
-                        Acessar
-                    </button>
                 </div>
 
                 {/* 2. IMAGEM CENTRAL (50%) */}
