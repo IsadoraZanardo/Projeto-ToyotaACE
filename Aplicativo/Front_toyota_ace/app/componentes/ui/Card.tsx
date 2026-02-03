@@ -11,7 +11,6 @@ const FIXED_ITEM_DATA = {
     model: 'Toyota Corolla Altis Hybrid Premium 2024',
 };
 
-// --- COMPONENTE AUXILIAR PARA A IMAGEM ---
 const MeuCard = ({ src, alt, className = '' }: any) => {
     return (
         <div className={`relative ${className}`}>
@@ -54,23 +53,13 @@ export default function AcessoCardFixo() {
                         <h3 className="font-semibold text-lg mb-2">CariBox</h3>
                         <p className="text-gray-700">{item.model}</p>
                         <ul className="list-disc list-inside mt-2 text-gray-500 pl-4">
-                            <li>x</li>
-                            <li>x</li>
-                            <li>x</li>
-                            <li>x</li>
+                            <li>Motorização híbrida</li>
+                            <li>Economia</li>
+                            <li>Segurança</li>
                         </ul>
                     </div>
-
-<<<<<<< HEAD
-=======
                     {/* Botão de Acesso */}
-                    <button 
-                        onClick={handleAcessar}
-                        className=" bg-red-600 active:bg-red-800  py-3 rounded-lg text-base font-semibold transition duration-300 shadow-md"
-                    >
-                        Acessar
-                    </button>
->>>>>>> af59d42d3cc4249fb6b4ff42cc9eed05fd25ae17
+                   
                 </div>
 
                 {/* 2. IMAGEM CENTRAL (50%) */}

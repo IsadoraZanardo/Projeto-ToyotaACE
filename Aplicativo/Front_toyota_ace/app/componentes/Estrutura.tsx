@@ -35,14 +35,7 @@ export default function Estrutura() {
                         Seu carro já está sendo preparado!
                     </h1>
                     
-                    {/* Imagem do Carro */}
-                    <div className="text-center">
-                        <img 
-                            src="https://via.placeholder.com/600x300/e5e7eb/000000?text=Imagem+do+Carro+Aqui" 
-                            alt="Carro Escolhido" 
-                            className="max-w-xl mx-auto h-auto object-contain"
-                        />
-                    </div>
+                   
                     
                     {/* Informações do Carro */}
                     <div className="text-center mt-4">
