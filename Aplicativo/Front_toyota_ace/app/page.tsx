@@ -10,6 +10,8 @@ export default function Home(){
   return(
    <div className=''>
     <Header/> 
+    <br />
+    <br />
     <Backdrop/>
     <div className='h-screen flex items-center p-8'>
       <Carrousel/>

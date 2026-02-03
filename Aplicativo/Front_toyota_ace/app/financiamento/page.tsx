@@ -4,12 +4,12 @@ import Image from "next/image"
 import { useEffect, useState } from "react"
 
 
-import Estrutura from "../componentes/Estrutura"
+import Estrutura from "@/app/financiamento/Estrutura"
 import MeuCard from "@/app/componentes/ui/MeuCard"
 
-import Yaris from "@/app/assets/image/image/yaris.png"
+import Yaris from "@/app/assets/image/image/carro toyota.jpg"
 
-export default function Financiamento(){
+export default function dadosPessoais(){
 
     const [dadosBackend, setDadosBackend] = useState({})
     
