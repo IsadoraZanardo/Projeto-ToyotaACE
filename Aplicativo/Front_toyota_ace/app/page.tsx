@@ -4,14 +4,12 @@ import Backdrop from './componentes/Backdrop'
 import Carrousel from './componentes/ui/Carrousel'
 import Rodape from './componentes/ui/Rodape'
 import Login from './login/page'
-
+import cadastro from './cadastro/page'
 
 export default function Home(){
   return(
    <div className=''>
     <Header/> 
-    <br />
-    <br />
     <Backdrop/>
     <div className='h-screen flex items-center p-8'>
       <Carrousel/>
