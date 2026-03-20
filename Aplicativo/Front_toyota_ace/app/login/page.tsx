@@ -35,15 +35,26 @@ export default function Login() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gray-300 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-md p-8">
-        <h1 className="text-2xl font-semibold mb-2">Login</h1>
-        <p className="text-sm text-gray-600 mb-6">
+    <div className="w-full min-h-screen bg-[url('https://mir-s3-cdn-cf.behance.net/project_modules/fs/c84ab249239255.56085275bc31a.png')] bg-center bg-cover flex flex-col items-center justify-center p-4">
+      
+      <h1 className="text-white text-4xl font-bold mb-6 flex items-center gap-3">
+  <img 
+    src="https://www.citypng.com/public/uploads/preview/hd-toyota-logo-emblem-transparent-png-7017516947726323ivxwwcgjw.png" 
+    className="w-10 h-10"
+    alt="logo"
+  />
+  TOYOTA ACE
+</h1>
+
+      <div className="bg-white/55 backdrop-blur-[10px] w-full max-w-xl rounded-3xl shadow-md p-8 border border-white/20">
+        
+        <h1 className="text-2xl font-semibold text-black mb-2">Login</h1>
+        <p className="text-sm text-black mb-6">
           Digite os seus dados de acesso no campo abaixo.
         </p>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">E-mail</label>
+          <label className="block text-sm font-medium mb-1 text-black">E-mail</label>
           <input
             type="email"
             placeholder="Digite seu e-mail"
@@ -53,7 +64,7 @@ export default function Login() {
         </div>
 
         <div className="mb-2">
-          <label className="block text-sm font-medium mb-1">Senha</label>
+          <label className="block text-sm font-medium mb-1 text-black">Senha</label>
           <input
             type="password"
             placeholder="Digite sua senha"
@@ -62,7 +73,7 @@ export default function Login() {
           />
         </div>
 
-        <button className="text-sm text-gray-500 mb-4 hover:underline">
+        <button className="text-sm text-black mb-4 hover:underline">
           Esqueci minha senha
         </button>
 
@@ -72,7 +83,9 @@ export default function Login() {
         >
           Acessar
         </button>
+
       </div>
+
     </div>
   )
 }
