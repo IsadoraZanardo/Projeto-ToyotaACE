@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react';
-import Header from "../componentes/Header";
+import Header from "../componentes/ui/Header";
 import Rodape from "../componentes/ui/Rodape";
 import Image from "next/image"
 import { useRouter } from 'next/navigation'

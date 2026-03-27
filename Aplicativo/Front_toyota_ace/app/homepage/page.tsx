@@ -1,6 +1,6 @@
 "use client"
 
-import Header from "../componentes/Header"
+import Header from "../componentes/ui/Header"
 // Importações não utilizadas removidas: HeroSection, Login
 import Card from "../componentes/ui/Card"
 import Rodape from "../componentes/ui/Rodape"
