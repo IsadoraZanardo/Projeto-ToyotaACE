@@ -1,19 +1,24 @@
 import Header from '@/app/componentes/Header'
-import HeroSection from './componentes/HeroSection'
-import Backdrop from './componentes/Backdrop'
-import Carrousel from './componentes/ui/Carrousel'
-import Rodape from './componentes/ui/Rodape'
-import Login from './login/page'
-import cadastro from './cadastro/page'
+import HeroSection from '../componentes/HeroSection'
+import Backdrop from '../componentes/Backdrop'
+import Carrousel from '../componentes/ui/Carrousel'
+import Rodape from '../componentes/ui/Rodape'
+import Login from '../login/page'
+import cadastro from '../cadastro/page'
 
 export default function Home(){
   return(
    <div className=''>
-    <Header/> 
+    <Header/>
     <Backdrop/>
-    <div className='h-screen flex items-center p-8'>
-      <Carrousel/>
+
+    {/* 🔥 AQUI FOI CORRIGIDO */}
+    <div className='h-screen flex items-center justify-center p-8'>
+      <div className="w-full max-w-4xl">
+        <Carrousel/>
+      </div>
     </div>
+
     {/* Seção principal do conteúdo */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="flex flex-col lg:flex-row justify-between">
@@ -48,7 +53,8 @@ export default function Home(){
           </div>
         </div>
       </div>
+
     <Rodape/>
-    </div>
-  )
+    </div>
+  )
 }

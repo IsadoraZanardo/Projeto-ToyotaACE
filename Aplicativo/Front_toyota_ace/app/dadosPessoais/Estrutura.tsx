@@ -1,5 +1,5 @@
 import React from 'react';
-import Header from "../componentes/Header";
+import Header from "../componentes/ui/Header";
 import Rodape from "../componentes/ui/Rodape";
 
 // Dados de exemplo (Para tornar o componente dinâmico)
