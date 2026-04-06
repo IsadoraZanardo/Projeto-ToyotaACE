@@ -1,0 +1,120 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import logoT from "@/assets/logoT.png";
+
+const LoginPage = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  // ✅ REDIRECIONAMENTO CORRETO
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !password) {
+      setError("Preencha todos os campos.");
+      return;
+    }
+
+    login(email, password);
+
+    // ✅ pode manter aqui (evento = seguro)
+    navigate("/dashboard");
+  };
+
+  return (
+    <div className="w-full min-h-screen bg-[url('https://mir-s3-cdn-cf.behance.net/project_modules/fs/c84ab249239255.56085275bc31a.png')] bg-center bg-cover flex flex-col items-center justify-center p-4">
+      <Card className="w-full max-w-md animate-fade-in backdrop-blur-xl bg-white/10">
+        <CardHeader className="text-center space-y-2">
+          <div className="mx-auto w-16 h-16 flex items-center justify-center mb-1">
+            <img
+              src={logoT}
+              alt="Toyota Logo"
+              className="w-24 h-24 object-contain"
+            />
+          </div>
+
+          <CardTitle className="text-2xl font-bold text-white">
+            TOYOTA ACE
+          </CardTitle>
+
+          <CardDescription className="text-white">
+            Acesse sua conta para acompanhar seu veículo
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-white">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-white">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
+
+            <Button type="submit" className="w-full">
+              Entrar
+            </Button>
+
+            <p className="text-center text-sm">
+              <Link
+                to="/esqueci-senha"
+                className="text-white hover:underline text-xs"
+              >
+                Esqueci minha senha
+              </Link>
+            </p>
+
+            <p className="text-center text-white text-sm">
+              Não tem conta?{" "}
+              <Link
+                to="/cadastro"
+                className="text-primary hover:underline font-medium"
+              >
+                Cadastre-se
+              </Link>
+            </p>
+
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default LoginPage;
