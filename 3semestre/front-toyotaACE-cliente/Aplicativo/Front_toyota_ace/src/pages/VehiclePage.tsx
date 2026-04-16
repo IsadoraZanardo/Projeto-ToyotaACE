@@ -24,21 +24,41 @@ const steps = [
     color: "bg-blue-500",
     description: "Seu pedido foi registrado no sistema da concessionária.",
   },
+
+
   {
-    label: "Em Produção",
+    label: "Linha De Produção",
     done: true,
     color: "bg-yellow-500",
     description: "O veículo entrou na linha de produção da fábrica.",
   },
+
+  
   {
     label: "Inspeção",
-    done: false,
+    done: true,
     color: "bg-orange-500",
     description: "São realizados testes de qualidade e segurança.",
   },
+
+  {
+    label: "Cegonha",
+    done: true,
+    color: "bg-red-500",
+    description: "Seu pedido está em transporte, a caminho da concessionária.",
+  },
+
+  {
+    label: "Concessionária",
+    done: true,
+    color: "bg-pink-500",
+    description: "Seu pedido foi registrado no sistema da concessionária.",
+  },
+
+
   {
     label: "Pronto para Retirada",
-    done: false,
+    done: true,
     color: "bg-green-500",
     description: "Seu veículo está pronto para ser retirado na concessionária.",
   },
@@ -69,7 +89,7 @@ const VehiclePage = () => {
             {/* CARD VEÍCULO */}
             <Card className="bg-white dark:bg-zinc-900 border shadow-sm">
               <CardHeader>
-                <CardTitle className="text-xl text-black">
+                <CardTitle className="text-xl ">
                   {vehicleData.modelo}
                 </CardTitle>
               </CardHeader>
