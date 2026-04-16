@@ -6732,19 +6732,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Isadora Zanardo\\.nuget\\packages\\": {}
+    "C:\\Users\\alinesilva85\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Isadora Zanardo\\Desktop\\Projeto-ToyotaACE-main\\Projeto-ToyotaACE-main\\App\\Front_toyota_ace\\app\\BackEndAPI\\BackEndAPI.csproj",
+      "projectUniqueName": "C:\\Users\\alinesilva85\\Desktop\\3° Semestre\\Projeto-ToyotaACE\\3semestre\\Toyota-ACE-Vendedor\\Aplicativo\\BackEndAPI\\BackEndAPI.csproj",
       "projectName": "BackEndAPI",
-      "projectPath": "C:\\Users\\Isadora Zanardo\\Desktop\\Projeto-ToyotaACE-main\\Projeto-ToyotaACE-main\\App\\Front_toyota_ace\\app\\BackEndAPI\\BackEndAPI.csproj",
-      "packagesPath": "C:\\Users\\Isadora Zanardo\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Isadora Zanardo\\Desktop\\Projeto-ToyotaACE-main\\Projeto-ToyotaACE-main\\App\\Front_toyota_ace\\app\\BackEndAPI\\obj\\",
+      "projectPath": "C:\\Users\\alinesilva85\\Desktop\\3° Semestre\\Projeto-ToyotaACE\\3semestre\\Toyota-ACE-Vendedor\\Aplicativo\\BackEndAPI\\BackEndAPI.csproj",
+      "packagesPath": "C:\\Users\\alinesilva85\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\alinesilva85\\Desktop\\3° Semestre\\Projeto-ToyotaACE\\3semestre\\Toyota-ACE-Vendedor\\Aplicativo\\BackEndAPI\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Isadora Zanardo\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\alinesilva85\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net9.0"
@@ -6826,7 +6826,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
       }
     }
   }
