@@ -9,16 +9,20 @@ import paho.mqtt.client as mqtt
 
 BROKER = "mqtt"
 PORT = 1883
-TOPIC = "senai/pii_toy"
+TOPIC = "toyota/sensor/dados"
 
 QTD_CARROS = 10
 
 ETAPAS = [
+    "PEDIDO REALIZADO",
     "PRODUCAO",
-    "INSPECAO"
-]
+    "INSPECAO",
+    "CEGONHA",
+    "CONCESSIONARIA",
+    "PRONTO PARA RETIRADA"
+    ]
 
-TEMPOS_ETAPA = [50, 60]
+TEMPOS_ETAPA = [2, 5, 6, 7, 4, 3]
 
 TEMPO_ENTRE_ETAPA1_E_2 = 2
 
@@ -27,9 +31,16 @@ TEMPO_ENTRE_ETAPA1_E_2 = 2
 # MQTT
 # -----------------------------
 
+
+# -----------------------------
+# MQTT
+# -----------------------------
+
+print("Conectando ao broker MQTT...")
 client = mqtt.Client()
 client.connect(BROKER, PORT)
-
+client.loop_start() # <--- ADICIONE ESTA LINHA
+print("Conectado ao broker MQTT.")
 
 # -----------------------------
 # FUNÇÕES
