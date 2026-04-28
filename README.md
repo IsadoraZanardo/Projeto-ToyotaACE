@@ -1,48 +1,49 @@
-# Repositório dedicado ao **Projeto Integrador** "**Toyota ACE**" | 2° Semestre do Curso Superior em Análise e Desenvolvimento de Sistemas
+# Repositório dedicado ao **Projeto Integrador** "**Toyota ACE**" | Curso Superior em Análise e Desenvolvimento de Sistemas
 
-### 1. Engenharia e Software: Kanban e GitHub
-#### 🐈 Um quadro Kanban foi criado no GitHub, para detalhar as etapas de criação e divisão das tarefas entre as integrantes. Também, no GitHub, foram adicionadas as histórias de usuário.
+<h3>3º Semestre</h3> 
 
-<br>
-
-### 2. Engenharia de Software: Fluxograma
-#### 🧩 O fluxograma, sugestão dos próprios colaboradores da Toyota, serve para auxiliar o desenvovlimento do Projeto, ajudando na visualização dos _clicks_ das telas e movimentação dinâmica dentro da aplicação.
+### 🏭 1. Interfaces Industriais
+#### Estuda a comunicação entre sistemas e máquinas no ambiente industrial. Envolve o desenvolvimento de interfaces homem-máquina (IHM), integração de dados do chão de fábrica e visualização de informações em tempo real.
+No projeto Toyota ACE, permite acompanhar o status da produção e dos dispositivos industriais. Integração entre interface e lógica de 
 
 <br>
 
-
-### 3. Engenharia de Software, Frontend e Backend: Documentação
-#### 📃 O Documento apresenta as principais tecnologias, dependências, modo de rodar, diagramas de classe e árvore de componentes do Projeto.
-
-<br>
-
-### 4. Backend: aplicação de API
-#### 🔗 O backend foi desenvolvido via aplicação console, ou seja, sem interface visual, apenas por escrita de código dentro do terminal do Visual Studio Code. Também foram utilizadas tecnologias de _swagger_, _scaffolding_, _PostgreSQL_, _models_ e _controllers_.
+### 📲 2. Desenvolvimento Mobile 
+#### Foca na criação de aplicativos para dispositivos móveis, utilizando tecnologias como React Native. Envolve interface do usuário, consumo de APIs e usabilidade.
+No projeto Toyota ACE, é responsável pela interface que permite ao cliente acompanhar o processo de fabricação, logística e entrega do veículo. As páginas Web também estão envolvidas nessa disciplina.
 
 <br>
 
-### 5. Frontend: Figma
-#### 😎 O Projeto Integrador foi desenvolvido, primeiramente, em páginas Figma, para facilitar a visualização e preparação de ideias iniciais.
+### 💭 3. Planejamento Estratégico de TI
+#### Aborda o alinhamento da Tecnologia da Informação com os objetivos do negócio. Inclui análise de cenários, definição de estratégias e uso de frameworks como SWOT e as forças competitivas de Porter e outros autores.
+No projeto Toyota ACE, garante que a solução Toyota ACE esteja alinhada com a estratégia da empresa.
 
 <br>
 
-### 6. Frontend: React
-#### 💻 Após esse processo via Figma, as páginas começaram a ser desenvolvidas em React, via Node.js e aplicando uma árvore de componentes, para economizar tempo e repetição de código.
+### ☁️ 4. Cloud Computing
+#### Trata do uso de serviços em nuvem para armazenamento, processamento e disponibilização de aplicações. Envolve conceitos como escalabilidade, alta disponibilidade e segurança de dados, utilizando provedores como AWS.
+No projeto Toyota ACE, possibilita hospedar a aplicação, armazenar os dados da produção e garantir acesso remoto em tempo real para clientes e gestores, além de permitir integração com APIs e serviços distribuídos.
 
 <br>
 
-### Disciplinas Principais
-- FrontEnd – Gabriel Calro  
-- BackEnd – Cainã Antunes  
-- Engenharia de Software – Glauco Todesco  
+### 🦟 5. IoT
+#### Refere-se à Internet das Coisas, conectando dispositivos físicos à internet para coleta e troca de dados. Inclui sensores, atuadores e sistemas embarcados que monitoram o ambiente industrial. Focado principalmente na parte de MQTT com tecnologias como Node-RED, InfluxDB e Grafana.
+No projeto Toyota ACE, a IoT é responsável por capturar informações diretamente do chão de fábrica, como status das máquinas e andamento da produção, permitindo maior automação, rastreabilidade e tomada de decisão baseada em dados.
 
-### Demais Disciplinas
-- Tecnologia da Informação e Conectividade – André Cassulino  
-- Inteligência Artificial e Big Data – André Cassulino  
+<br>
 
-### Integrantes
-- Aline Aparecida da Silva Souza  
-- Cecília Georgeto  
-- Graciele Garglioni  
-- Isabelle Nastri Salles  
-- Isadora da Silva Zanardo  
+### 🏛️ 6. Integração Vertical e Horizontal
+#### Aborda a conexão entre diferentes níveis e setores de uma organização. A integração vertical conecta sistemas do chão de fábrica (nível operacional) aos sistemas gerenciais (ERP), enquanto a integração horizontal conecta diferentes áreas e processos ao longo da cadeia produtiva.
+No projeto Toyota ACE, garante que todas as etapas — desde o pedido do cliente até a entrega do veículo — estejam interligadas, promovendo eficiência, transparência e comunicação entre setores.
+
+<br>
+
+### 🫂 Integrantes
+- Aline Aparecida da Silva Souza
+- Cecília Georgeto
+- Graciele Garglioni
+- Hebert Santos Soares
+- Isabelle Nastri Salles
+- Isadora da Silva Zanardo
+- Rafael Pecorari de Barros
+- Rayan Luca Teixeira de Souza
