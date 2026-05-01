@@ -1,74 +1,81 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Header from "../componentes/ui/Header";
 import Rodape from "../componentes/ui/Rodape";
+import { useAuth } from "@/contexts/AuthContext"; // Importação do contexto
 
-// Dados de exemplo (Para tornar o componente dinâmico)
-const dadosPessoais = [
-  { label: 'Nome', value: 'João Silva', type: 'info' },
-  { label: 'CPF', value: '123.456.789-00', type: 'info' },
-  { label: 'E-mail', value: 'joaosilva@gmail.com', type: 'info' },
-  { label: 'Telefone', value: '(11) 91234-5678', type: 'info' },
-  { label: 'RG', status: 'Enviado', type: 'document' },
-  { label: 'CPF', status: 'Enviado', type: 'document' },
-  { label: 'CNH', status: 'Enviado', type: 'document' },
-  { label: 'Comprovante de Endereço ', status: ' Enviado', type: 'document' },
-  { label: 'Comprovante de Renda ', status: ' Enviado', type: 'document' },
-];
+// Definimos uma interface para os dados que vêm do banco (Java)
+interface EstruturaProps {
+  dados?: {
+    nome: string;
+    cpf: string;
+    email: string;
+    telefone?: string;
+    modeloVeiculo?: string;
+    statusVeiculo?: string;
+    imagemVeiculo?: string;
+  };
+}
 
-// O seu componente Estrutura agora é a página completa
-export default function Estrutura() {
-    return(
-        // Contêiner principal da página, com fundo cinza claro para replicar a imagem
+export default function Estrutura({ dados }: EstruturaProps) {
+    const { setUser } = useAuth();
+
+    // Sempre que os dados chegarem do banco, atualizamos o contexto global
+    // Isso fará o AppHeader mostrar o nome da Isabelle automaticamente
+    useEffect(() => {
+        if (dados) {
+            setUser(dados);
+        }
+    }, [dados, setUser]);
+
+    // Mapeamento dinâmico dos dados para a lista
+    const listaDados = [
+        { label: 'Nome', value: dados?.nome || 'Não informado', type: 'info' },
+        { label: 'CPF', value: dados?.cpf || 'Não informado', type: 'info' },
+        { label: 'E-mail', value: dados?.email || 'Não informado', type: 'info' },
+        { label: 'RG', status: 'Enviado', type: 'document' },
+        { label: 'CPF', status: 'Enviado', type: 'document' },
+        { label: 'CNH', status: 'Enviado', type: 'document' },
+        { label: 'Endereço', status: 'Enviado', type: 'document' },
+        { label: 'Renda', status: 'Enviado', type: 'document' },
+    ];
+
+    return (
         <div className="w-full bg-neutral-100 min-h-screen">
-            <Header/>
+            <Header />
             
-            {/* Contêiner Principal do Conteúdo: Centraliza o status do carro/dados */}
             <main className="max-w-4xl mx-auto space-y-6 px-4 py-8"> 
 
-                {/* ======================================================= */}
                 {/* SEÇÃO 1: STATUS DO CARRO */}
-                {/* ======================================================= */}
                 <div className="bg-neutral-100 p-8 pt-10">
-                    
-                    {/* Título Principal */}
                     <h1 className="text-center text-3xl md:text-4xl font-semibold text-red-600 mb-8">
-                        Seu carro já está sendo preparado!
+                        Seu {dados?.modeloVeiculo || "carro"} já está sendo preparado!
                     </h1>
                     
-                    {/* Imagem do Carro */}
                     <div className="text-center">
                         <img 
-                            src="https://via.placeholder.com/600x300/e5e7eb/000000?text=Imagem+do+Carro+Aqui" 
+                            src={dados?.imagemVeiculo || "https://via.placeholder.com/600x300?text=Toyota"} 
                             alt="Carro Escolhido" 
                             className="max-w-xl mx-auto h-auto object-contain"
                         />
                     </div>
                     
-                    {/* Informações do Carro */}
                     <div className="text-center mt-4">
-                        <p className="text-sm text-gray-600 mb-1">
-                            Carro escolhido:
-                        </p>
-                        <p className="text-base font-medium text-gray-800">
-                            Toyota Corolla Altis Hybrid Premium 2024
+                        <p className="text-sm text-gray-600 mb-1">Status atual:</p>
+                        <p className="text-base font-bold text-red-600 uppercase tracking-widest">
+                            {dados?.statusVeiculo || "PINTURA"}
                         </p>
                     </div>
                 </div>
 
-                {/* ======================================================= */}
-                {/* SEÇÃO 2: DADOS PESSOAIS E DOCUMENTOS */}
-                {/* ======================================================= */}
+                {/* SEÇÃO 2: DADOS PESSOAIS */}
                 <div className="bg-neutral-100 p-8"> 
-                    
-                    {/* Título da Seção */}
                     <h3 className="text-xl md:text-2xl font-semibold mb-6">
                         <span className="text-red-600 mr-2">Dados pessoais:</span>
                         <span className="text-gray-900">Seus dados já foram aprovados!</span>
                     </h3>
                     
-                    {/* Lista de Dados e Status de Documentos */}
                     <ul className="space-y-2 text-gray-800 text-base">
-                        {dadosPessoais.map((item, index) => (
+                        {listaDados.map((item, index) => (
                             <li key={index} className="flex items-start">
                                 {item.type === 'info' ? (
                                     <p>
@@ -78,7 +85,6 @@ export default function Estrutura() {
                                 ) : (
                                     <p className="flex items-center">
                                         <span className="text-green-600 mr-2 text-lg">✅</span> 
-                                        
                                         <span className="font-bold">{item.label}</span>{' '}
                                         <span className="text-gray-700">- {item.status}</span>
                                     </p>
@@ -87,11 +93,9 @@ export default function Estrutura() {
                         ))}
                     </ul>
                 </div>
-                {/* FIM DO CONTEÚDO DA PÁGINA */}
-
             </main>
             
-            <Rodape/>
+            <Rodape />
         </div>
-    )
+    );
 }

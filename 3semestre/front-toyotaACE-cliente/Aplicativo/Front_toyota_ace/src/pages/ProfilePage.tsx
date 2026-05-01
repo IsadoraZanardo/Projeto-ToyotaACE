@@ -68,8 +68,8 @@ const ProfilePage = () => {
                   <div>
                     <p className="text-sm text-gray-500">CPF</p>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {/* CPF vindo do banco (Java) */}
-                      {dadosBanco?.cpf || "Carregando..."}
+                      {/* O sinal de '?' evita que a tela trave se o dado demorar a chegar */}
+                      {dadosBanco?.cpf || dadosBanco?.nrCpf || "CPF não localizado"}
                     </p>
                   </div>
                 </div>

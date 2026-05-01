@@ -1,45 +1,39 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
+// Interface atualizada para refletir os dados que vimos no seu JSON (image_bafc72.png)
 interface User {
-  name: string;
+  id?: number;
+  nome: string;
   email: string;
-  cpf: string;
+  cpf?: string;
+  statusVeiculo?: string;
+  modeloCarro?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => boolean;
-  register: (name: string, email: string, password: string) => boolean;
+  setUser: (user: User | null) => void; // Permite atualizar o usuário globalmente
+  login: (userData: User) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const MOCK_USER: User = {
-  name: "Carlos Eduardo",
-  email: "carlos@email.com",
-  cpf: "123.456.789-00",
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem("toyota-auth");
-    return saved ? JSON.parse(saved) : null;
+    // Tenta recuperar o usuário do navegador ao carregar a página
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("toyota-auth");
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
   });
 
-  const login = useCallback((email: string, _password: string) => {
-    const u = { ...MOCK_USER, email };
-    setUser(u);
-    localStorage.setItem("toyota-auth", JSON.stringify(u));
-    return true;
-  }, []);
-
-  const register = useCallback((name: string, email: string, _password: string) => {
-    const u = { ...MOCK_USER, name, email };
-    setUser(u);
-    localStorage.setItem("toyota-auth", JSON.stringify(u));
-    return true;
+  // Função para salvar o usuário quando ele logar ou os dados chegarem da API
+  const login = useCallback((userData: User) => {
+    setUser(userData);
+    localStorage.setItem("toyota-auth", JSON.stringify(userData));
   }, []);
 
   const logout = useCallback(() => {
@@ -48,7 +42,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      setUser, 
+      isAuthenticated: !!user, 
+      login, 
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );

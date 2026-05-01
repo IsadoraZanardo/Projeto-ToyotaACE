@@ -10,9 +10,14 @@ const AppHeader = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
+  // Lógica para extrair apenas o primeiro nome dinamicamente
+  // 1. Usamos 'user?.nome' pois é a chave que vem do seu Java/Banco
+  // 2. O .split(" ")[0] pega a primeira palavra antes do primeiro espaço
+  const primeiroNome = user?.nome?.trim().split(" ")[0] || "Usuário";
+
   const handleLogout = () => {
     logout();
-    navigate("/apresentacao"); // 🔥 manda pra landing
+    navigate("/apresentacao"); 
   };
 
   return (
@@ -44,14 +49,15 @@ const AppHeader = () => {
 
         {user && (
           <>
-            <span className="hidden md:inline text-sm text-muted-foreground">
-              {user?.name || "Usuário"}
+            {/* Exibindo o primeiro nome tratado aqui */}
+            <span className="hidden md:inline text-sm font-medium text-muted-foreground">
+              {primeiroNome}
             </span>
 
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleLogout} // ✅ aqui
+              onClick={handleLogout}
               className="text-muted-foreground hover:text-primary"
             >
               <LogOut className="h-4 w-4" />
