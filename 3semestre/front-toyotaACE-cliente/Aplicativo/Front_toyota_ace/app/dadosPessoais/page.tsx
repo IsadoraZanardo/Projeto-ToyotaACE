@@ -1,50 +1,51 @@
 "use client"
-import Image from "next/image"
 import { useEffect, useState } from "react"
 
-// Importe o seu contexto de autenticação (ajuste se a pasta contexts estiver fora da app)
-// Se 'contexts' estiver dentro de 'app', use:
-import { useAuth } from "../contexts/AuthContext" 
+// 1. IMPORT DO CONTEXTO: Sobe duas pastas para sair de 'dadosPessoais' e 'app', depois entra em 'src'
+import { useAuth } from "../../src/contexts/AuthContext" 
 
-// Caminho para o serviço de API
-import { getAcompanhamento } from "../services/api"
+// 2. IMPORT DO SERVIÇO: Ajustado para o caminho correto na pasta 'src' conforme sua estrutura
+import { getAcompanhamento } from "../../src/services/api"
 
-// Caminhos baseados na imagem da sua estrutura de pastas
+// 3. IMPORT DOS COMPONENTES: Estes geralmente ficam dentro da pasta 'app'
 import Estrutura from "../componentes/Estrutura"
-import MeuCard from "../componentes/ui/MeuCard"
 
-// Caminho para a imagem do Yaris
-import Yaris from "../assets/image/image/yaris.png"
-
-export default function Financiamento() {
-    const { user } = useAuth();
+export default function DadosPessoais() {
+    const { user, setUser } = useAuth();
     const [dadosBanco, setDadosBanco] = useState<any>(null);
 
     useEffect(() => {
-        async function buscarDados() {
-            if (user?.email) {
-                const resposta = await getAcompanhamento(user.email);
+        async function carregarDadosPerfil() {
+            // Usa o e-mail do usuário logado ou o e-mail de teste da Isabelle
+            const emailParaBusca = user?.email || "isabelle@exemplo.com"; 
+
+            try {
+                // Busca os dados no seu backend Java
+                const resposta = await getAcompanhamento(emailParaBusca);
+                console.log("Dados carregados com sucesso:", resposta);
+                
                 setDadosBanco(resposta);
+
+                // Importante: Atualiza o contexto global para que o nome mude no Header
+                if (resposta && resposta.nome) {
+                    setUser(resposta);
+                }
+            } catch (error) {
+                console.error("Erro ao buscar dados no Java:", error);
             }
         }
-        buscarDados();
-    }, [user?.email]);
+
+        carregarDadosPerfil();
+    }, [user?.email, setUser]);
 
     return (
+        /* A Estrutura recebe 'dadosBanco' e preenche Nome, CPF e Email automaticamente */
         <Estrutura dados={dadosBanco}>
-            <MeuCard tamanho="xl">
-                <div className="flex flex-col items-center">
-                    <Image
-                        src={Yaris}
-                        width={300} // Aumentei para ficar melhor na tela
-                        height={200}
-                        alt="yaris"
-                    />
-                    <p className="mt-2 font-bold text-gray-700">
-                        {dadosBanco?.modeloVeiculo || "Toyota Yaris"}
-                    </p>
-                </div>
-            </MeuCard>
+            <div className="w-full text-center py-4">
+                <p className="text-sm text-gray-500 italic">
+                    Dados sincronizados com o sistema Toyota ACE.
+                </p>
+            </div>
         </Estrutura>
     );
 }

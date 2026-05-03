@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: toyota_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: sistema_estoque
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: senha_segura_123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    container_name: toyota_backend
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sistema_estoque
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: senha_segura_123
+    ports:
+      - "8081:8081"
+
+volumes:
+  postgres_data:

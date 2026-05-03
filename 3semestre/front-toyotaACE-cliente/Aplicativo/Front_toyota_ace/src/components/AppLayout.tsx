@@ -8,7 +8,11 @@ import AppSidebar from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 const AppLayout = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div>;
+  }
 
   // 🔒 só protege as rotas internas
   if (!isAuthenticated) {
