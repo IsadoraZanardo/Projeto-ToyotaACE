@@ -1,109 +1,419 @@
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/services/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, CheckCircle2 } from "lucide-react";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+import {
+  Plus,
+  MapPin,
+  Phone,
+  Car,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
+} from "lucide-react";
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-const timeSlots = ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
+type AppointmentType = "revisao" | "retirada" | "recall" | "outros";
+
+type Appointment = {
+  id: number;
+  date: string;
+  time: string;
+  client: string;
+  type: AppointmentType;
+  description: string;
+};
+
+const typeConfig = {
+  revisao: {
+    label: "Revisão",
+    icon: Car,
+    className: "bg-blue-500/15 text-blue-400",
+  },
+  retirada: {
+    label: "Retirada",
+    icon: CheckCircle2,
+    className: "bg-green-500/15 text-green-400",
+  },
+  recall: {
+    label: "Recall",
+    icon: AlertTriangle,
+    className: "bg-yellow-500/15 text-yellow-500",
+  },
+  outros: {
+    label: "Outros",
+    icon: MapPin,
+    className: "bg-purple-500/15 text-purple-400",
+  },
+};
 
 const SchedulingPage = () => {
   const { user } = useAuth();
-  const [date, setDate] = useState<Date>();
-  const [time, setTime] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
-  const [error, setError] = useState("");
+
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [month, setMonth] = useState<Date>(new Date());
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const handleConfirm = async () => {
-    if (!date || !time) return;
-    setError("");
+  const [form, setForm] = useState({
+    time: "",
+    client: user?.name || user?.email || "",
+    type: "retirada" as AppointmentType,
+    description: "Agendamento realizado pelo portal Toyota ACE",
+  });
+
+  const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+  const formattedDate = format(selectedDate, "d 'de' MMMM, yyyy", {
+    locale: ptBR,
+  });
+
+  const dayAppointments = appointments
+    .filter((appointment) => appointment.date === dateStr)
+    .sort((a, b) => a.time.localeCompare(b.time));
+
+  const datesWithAppointments = [
+    ...new Set(appointments.map((appointment) => appointment.date)),
+  ];
+
+  const handleChangeType = (value: AppointmentType) => {
+    setForm({
+      ...form,
+      type: value,
+      description:
+        value === "outros"
+          ? ""
+          : `Agendamento de ${typeConfig[value].label} realizado pelo portal Toyota ACE`,
+    });
+  };
+
+  const handleSave = async () => {
+    if (!form.time || !form.client.trim()) {
+      toast.error("Preencha horário e cliente");
+      return;
+    }
+
+    if (form.type === "outros" && !form.description.trim()) {
+      toast.error("Informe a observação para o tipo Outros");
+      return;
+    }
 
     try {
       setLoading(true);
+
       await api.agendar({
         clienteId: user?.id,
         email: user?.email,
-        data: format(date, "yyyy-MM-dd"),
-        horario: `${time}:00`,
-        tipoServico: "Retirada do veículo",
-        observacao: "Agendamento realizado pelo portal Toyota ACE",
+        data: dateStr,
+        horario: `${form.time}:00`,
+        tipoServico: typeConfig[form.type].label,
+        observacao: form.description,
       });
-      setConfirmed(true);
+
+      const newAppointment: Appointment = {
+        id: Date.now(),
+        date: dateStr,
+        time: form.time,
+        client: form.client,
+        type: form.type,
+        description: form.description,
+      };
+
+      setAppointments((prev) => [...prev, newAppointment]);
+
+      toast.success("Agendamento criado!");
+      setDialogOpen(false);
+
+      setForm({
+        time: "",
+        client: user?.name || user?.email || "",
+        type: "retirada",
+        description: "Agendamento de Retirada realizado pelo portal Toyota ACE",
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível confirmar o agendamento.");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível confirmar o agendamento."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDelete = (id: number) => {
+    setAppointments((prev) =>
+      prev.filter((appointment) => appointment.id !== id)
+    );
+
+    setDeleteConfirm(null);
+    toast.success("Agendamento removido!");
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
-      <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {!confirmed ? (
-            <div className="space-y-8 max-w-lg mx-auto">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Agendamento de Retirada</h1>
-                <p className="text-gray-500 mt-2">Escolha a melhor data para retirar seu veículo.</p>
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Agenda
+            </h1>
+            <p className="text-sm text-muted-foreground">{formattedDate}</p>
+          </div>
+
+          <Button
+            onClick={() => setDialogOpen(true)}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Novo agendamento
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6">
+          <div className="rounded-lg border border-border bg-card p-2 self-start">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              month={month}
+              onMonthChange={setMonth}
+              locale={ptBR}
+              className="pointer-events-auto"
+              disabled={(date) =>
+                date < new Date(new Date().setHours(0, 0, 0, 0))
+              }
+              modifiers={{
+                hasAppointment: datesWithAppointments.map(
+                  (date) => new Date(`${date}T12:00:00`)
+                ),
+              }}
+              modifiersClassNames={{
+                hasAppointment: "border-2 border-red-500/50",
+              }}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Compromissos · {dayAppointments.length}
+            </h2>
+
+            {dayAppointments.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Nenhum compromisso neste dia.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {dayAppointments.map((appointment) => {
+                  const config = typeConfig[appointment.type];
+                  const Icon = config.icon;
+
+                  return (
+                    <div
+                      key={appointment.id}
+                      className="p-4 rounded-lg border border-border bg-card hover:border-red-500/30 transition-all"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="text-center shrink-0 pt-0.5">
+                          <p className="text-lg font-bold tabular-nums">
+                            {appointment.time}
+                          </p>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm">
+                              {appointment.client}
+                            </p>
+
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1 ${config.className}`}
+                            >
+                              <Icon className="h-3 w-3" />
+                              {config.label}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-muted-foreground">
+                            {appointment.description || "Sem observação"}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirm(appointment.id)}
+                          className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-destructive/15 transition-colors shrink-0"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-
-              <Card className="bg-white dark:bg-zinc-900 border shadow-sm">
-                <CardHeader><CardTitle className="text-lg">Escolha a data e horário</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Data</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={date} onSelect={setDate} disabled={(d) => d < new Date()} className="p-3 pointer-events-auto" locale={ptBR} />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Horário</label>
-                    <Select value={time} onValueChange={setTime}>
-                      <SelectTrigger><SelectValue placeholder="Selecione um horário" /></SelectTrigger>
-                      <SelectContent>{timeSlots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-
-                  {error && <p className="text-sm text-red-600">{error}</p>}
-
-                  <Button className="w-full bg-red-600 hover:bg-red-700 text-white" disabled={!date || !time || loading} onClick={handleConfirm}>
-                    {loading ? "Confirmando..." : "Confirmar Agendamento"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <Card className="max-w-md w-full text-center bg-white dark:bg-zinc-900 border shadow-lg">
-                <CardContent className="pt-8 pb-8 space-y-4">
-                  <CheckCircle2 className="h-16 w-16 text-red-600 mx-auto" />
-                  <h2 className="text-xl font-bold">Agendamento Confirmado!</h2>
-                  <p className="text-gray-500">Retirada em <span className="font-medium text-gray-900 dark:text-white">{format(date!, "dd/MM/yyyy", { locale: ptBR })}</span> às <span className="font-medium text-gray-900 dark:text-white">{time}</span></p>
-                  <Button variant="outline" onClick={() => { setConfirmed(false); setDate(undefined); setTime(""); }}>Reagendar</Button>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
 
-      <footer className="bg-black border-t border-border"><div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-400">© {new Date().getFullYear()} Toyota do Brasil — Todos os direitos reservados</div></footer>
+      <footer className="bg-black border-t border-border">
+        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-400">
+          © {new Date().getFullYear()} Toyota do Brasil — Todos os direitos
+          reservados
+        </div>
+      </footer>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo agendamento</DialogTitle>
+            <DialogDescription>
+              Agende um compromisso para {formattedDate}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Horário</Label>
+              <Input
+                type="time"
+                value={form.time}
+                onChange={(event) =>
+                  setForm({ ...form, time: event.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Cliente</Label>
+              <Input
+                value={form.client}
+                onChange={(event) =>
+                  setForm({ ...form, client: event.target.value })
+                }
+                placeholder="Nome do cliente"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={form.type} onValueChange={handleChangeType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="revisao">Revisão</SelectItem>
+                  <SelectItem value="retirada">Retirada</SelectItem>
+                  <SelectItem value="recall">Recall</SelectItem>
+                  <SelectItem value="outros">Outros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {form.type === "outros" && (
+              <div className="space-y-2">
+                <Label>Observação</Label>
+                <Input
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm({ ...form, description: event.target.value })
+                  }
+                  placeholder="Explique o motivo do agendamento"
+                />
+              </div>
+            )}
+
+            {form.type !== "outros" && (
+              <div className="space-y-2">
+                <Label>Observação</Label>
+                <Input
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm({ ...form, description: event.target.value })
+                  }
+                  placeholder="Detalhes do compromisso"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+
+            <Button
+              onClick={handleSave}
+              disabled={loading}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={() => setDeleteConfirm(null)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir agendamento</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja remover este compromisso?
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              Cancelar
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteConfirm !== null) {
+                  handleDelete(deleteConfirm);
+                }
+              }}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

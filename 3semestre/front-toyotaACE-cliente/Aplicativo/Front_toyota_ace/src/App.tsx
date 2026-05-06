@@ -17,6 +17,7 @@ import VehiclePage from "@/pages/VehiclePage";
 import FinancingPage from "@/pages/FinancingPage";
 import SchedulingPage from "@/pages/SchedulingPage";
 import ProfilePage from "@/pages/ProfilePage";
+import ShopPage from "@/pages/ShopPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,31 +32,25 @@ const App = () => (
 
           <BrowserRouter>
             <Routes>
-
-              {/* 🔥 Entrada do app */}
               <Route path="/" element={<Navigate to="/apresentacao" replace />} />
 
-              {/* 🌐 Públicas */}
               <Route path="/apresentacao" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/cadastro" element={<RegisterPage />} />
               <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
 
-              {/* 🚀 Agora TODAS são acessíveis */}
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/veiculo" element={<VehiclePage />} />
                 <Route path="/financiamento" element={<FinancingPage />} />
                 <Route path="/agendamento" element={<SchedulingPage />} />
+                <Route path="/shop" element={<ShopPage />} />
                 <Route path="/perfil" element={<ProfilePage />} />
               </Route>
 
-              {/* ❌ Not Found */}
               <Route path="*" element={<NotFound />} />
-
             </Routes>
           </BrowserRouter>
-
         </TooltipProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -58,7 +58,6 @@ const VehiclePage = () => {
                   <Campo label="Cor" value={vehicleData?.corVeiculo} />
                   <Campo label="Câmbio" value={vehicleData?.cambioVeiculo} />
                   <Campo label="Combustível" value={vehicleData?.combustivelVeiculo} />
-                  <Campo label="Placa" value={vehicleData?.placaVeiculo} />
                   <Campo label="Chassi" value={vehicleData?.chassiVeiculo} />
                   <Campo label="Status" value={vehicleData?.statusVeiculo} />
                 </div>
