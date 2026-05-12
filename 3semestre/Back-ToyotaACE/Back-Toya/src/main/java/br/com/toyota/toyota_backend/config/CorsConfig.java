@@ -10,12 +10,22 @@ public class CorsConfig {
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
+
         return new WebMvcConfigurer() {
+
             @Override
             public void addCorsMappings(CorsRegistry registry) {
+
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:5173")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedOrigins(
+                                "http://localhost:3000",
+                                "http://localhost:3001",
+                                "http://localhost:5173",
+                                "http://localhost:8081",
+                                "http://localhost:8082",
+                                "http://10.109.3.191:8082"
+                        )
+                        .allowedMethods("*")
                         .allowedHeaders("*")
                         .allowCredentials(false);
             }

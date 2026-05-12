@@ -1,65 +1,55 @@
 "use client"
+"use client"
 
-import Image from "next/image"
 import { useEffect, useState } from "react"
 
+import Estrutura from "./Estrutura"
+import MeuCard from "../componentes/ui/MeuCard"
 
-import Estrutura from "@/app/fichaTecnica/Estrutura"
-import MeuCard from "@/app/componentes/ui/MeuCard"
+export default function DadosPessoais() {
 
-import Yaris from "@/app/assets/image/image/yaris.png"
+    const [etapas, setEtapas] = useState<string[]>([])
 
-export default function dadosPessoais(){
+    useEffect(() => {
 
-    const [dadosBackend, setDadosBackend] = useState({})
-    
-    const botaoClicado = ()=>{
-        alert("botão clicado")
-    }
-
-    useEffect(()=>{ // atalho
-
-        /* const requisicao = async ()=>{
-            await fetch('localhost:8080/carros').then((res)=>{
-                res.json()
-            }).then((json:any)=>{
-                if(json.body.usuario != null ){
-                    router.push('homepage')
-                }
+        fetch("http://localhost:8083/iot/status/ABC123")
+            .then((res) => res.json())
+            .then((data) => {
+                setEtapas(data)
             })
-        }
+            .catch((error) => {
+                console.error("Erro ao buscar dados IoT:", error)
+            })
 
-        requisicao 
+    }, [])
 
-        //aqui é o que eu quero fazer quando uma ação acontecer
-        /*
-        Login:
-        1- voce digita suas credenciais (email e senha)
-        2- clicou em enviar (aqui o useEffect ativa)
-        3- Enviar as informações para o backend E AGUARDAR A RESPOSTA
-        4- Recebe a resposta e analisa (200:ok / 404:notFound / 501:internalError)
-        5- Armazenar o usuário válido no frontend
-        6- Se for válido, redireciona para home logada
-        */
-    },[])
-
-    
-
-
-    return(
+    return (
         <Estrutura>
-            <MeuCard
-            tamanho="xl">
-                <div>
-                    <Image
-                    src={Yaris}
-                    width={100}
-                    height={100}
-                    alt="yaris"
-                    />
+
+            <MeuCard tamanho="xl">
+
+                <div style={{ marginTop: "20px" }}>
+
+                    <h2>Timeline de Fabricação</h2>
+
+                    {etapas.length === 0 ? (
+
+                        <p>Nenhuma etapa encontrada.</p>
+
+                    ) : (
+
+                        etapas.map((etapa, index) => (
+                            <p key={index}>
+                                ✅ {etapa}
+                            </p>
+                        ))
+
+                    )}
+
                 </div>
-                
+
             </MeuCard>
+
         </Estrutura>
     )
 }
