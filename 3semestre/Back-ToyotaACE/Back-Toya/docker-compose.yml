@@ -1,6 +1,6 @@
-  services:
+services:
   postgres:
-    image: postgres:15
+    image: postgres:16
     container_name: toyota_postgres
     restart: always
     environment:
@@ -23,7 +23,7 @@
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: senha_segura_123
     ports:
-      - "8081:8081"
+      - "8083:8083"
 
 volumes:
   postgres_data:

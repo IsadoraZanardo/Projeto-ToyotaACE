@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/services/api";
 
@@ -27,7 +27,6 @@ import {
 import {
   Plus,
   MapPin,
-  Phone,
   Car,
   Trash2,
   CheckCircle2,
@@ -72,6 +71,16 @@ const typeConfig = {
   },
 };
 
+const mapTipoServico = (tipoServico?: string): AppointmentType => {
+  const tipo = (tipoServico || "").toLowerCase();
+
+  if (tipo.includes("revis")) return "revisao";
+  if (tipo.includes("retirada")) return "retirada";
+  if (tipo.includes("recall")) return "recall";
+
+  return "outros";
+};
+
 const SchedulingPage = () => {
   const { user } = useAuth();
 
@@ -83,12 +92,13 @@ const SchedulingPage = () => {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
 
   const [form, setForm] = useState({
     time: "",
     client: user?.name || user?.email || "",
     type: "retirada" as AppointmentType,
-    description: "Agendamento realizado pelo portal Toyota ACE",
+    description: "Agendamento de Retirada realizado pelo portal Toyota ACE",
   });
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -96,6 +106,43 @@ const SchedulingPage = () => {
   const formattedDate = format(selectedDate, "d 'de' MMMM, yyyy", {
     locale: ptBR,
   });
+
+  const carregarAgendamentos = async () => {
+    try {
+      if (!user?.id) return;
+
+      setLoadingAppointments(true);
+
+      const response = await api.buscarAgendamentosCliente(user.id);
+
+      const dadosFormatados: Appointment[] = response.map((item: any) => ({
+        id: item.id,
+        date: item.data,
+        time: item.horario?.substring(0, 5) || "",
+        client: item.cliente?.nome || user.name || user.email || "",
+        type: mapTipoServico(item.tipoServico),
+        description: item.observacao || "",
+      }));
+
+      setAppointments(dadosFormatados);
+    } catch (error) {
+      console.error("Erro ao carregar agendamentos:", error);
+      toast.error("Não foi possível carregar os agendamentos.");
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarAgendamentos();
+  }, [user?.id]);
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      client: user?.name || user?.email || "",
+    }));
+  }, [user]);
 
   const dayAppointments = appointments
     .filter((appointment) => appointment.date === dateStr)
@@ -139,16 +186,7 @@ const SchedulingPage = () => {
         observacao: form.description,
       });
 
-      const newAppointment: Appointment = {
-        id: Date.now(),
-        date: dateStr,
-        time: form.time,
-        client: form.client,
-        type: form.type,
-        description: form.description,
-      };
-
-      setAppointments((prev) => [...prev, newAppointment]);
+      await carregarAgendamentos();
 
       toast.success("Agendamento criado!");
       setDialogOpen(false);
@@ -170,13 +208,17 @@ const SchedulingPage = () => {
     }
   };
 
-  const handleDelete = (id: number) => {
-    setAppointments((prev) =>
-      prev.filter((appointment) => appointment.id !== id)
-    );
+  const handleDelete = async (id: number) => {
+    try {
+      await api.deletarAgendamento(id);
+      await carregarAgendamentos();
 
-    setDeleteConfirm(null);
-    toast.success("Agendamento removido!");
+      setDeleteConfirm(null);
+      toast.success("Agendamento removido!");
+    } catch (error) {
+      console.error("Erro ao excluir agendamento:", error);
+      toast.error("Não foi possível remover o agendamento.");
+    }
   };
 
   return (
@@ -228,7 +270,11 @@ const SchedulingPage = () => {
               Compromissos · {dayAppointments.length}
             </h2>
 
-            {dayAppointments.length === 0 ? (
+            {loadingAppointments ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Carregando agendamentos...
+              </p>
+            ) : dayAppointments.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
                 Nenhum compromisso neste dia.
               </p>
@@ -341,31 +387,16 @@ const SchedulingPage = () => {
               </Select>
             </div>
 
-            {form.type === "outros" && (
-              <div className="space-y-2">
-                <Label>Observação</Label>
-                <Input
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm({ ...form, description: event.target.value })
-                  }
-                  placeholder="Explique o motivo do agendamento"
-                />
-              </div>
-            )}
-
-            {form.type !== "outros" && (
-              <div className="space-y-2">
-                <Label>Observação</Label>
-                <Input
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm({ ...form, description: event.target.value })
-                  }
-                  placeholder="Detalhes do compromisso"
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label>Observação</Label>
+              <Input
+                value={form.description}
+                onChange={(event) =>
+                  setForm({ ...form, description: event.target.value })
+                }
+                placeholder="Detalhes do compromisso"
+              />
+            </div>
           </div>
 
           <DialogFooter>

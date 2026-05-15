@@ -1,4 +1,4 @@
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8081/api";
+export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8083/api";
 
 export type Cliente = {
   id?: number;
@@ -56,7 +56,10 @@ export type AgendamentoRequest = {
   observacao?: string;
 };
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
@@ -90,18 +93,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  // LOGIN
   login: (dados: LoginRequest) =>
     request<Cliente>("/clientes/login", {
       method: "POST",
       body: JSON.stringify(dados),
     }),
 
+  // CADASTRO
   cadastrar: (dados: CadastroRequest) =>
     request<Cliente>("/clientes/cadastro", {
       method: "POST",
       body: JSON.stringify(dados),
     }),
 
+  // CLIENTE
   buscarClientePorEmail: (email: string) =>
     request<Cliente>(`/clientes/${encodeURIComponent(email)}`),
 
@@ -111,20 +117,37 @@ export const api = {
       body: JSON.stringify(dados),
     }),
 
+  // VEÍCULO
   buscarVeiculoPorEmail: (email: string) =>
     request<Cliente>(`/veiculo/email/${encodeURIComponent(email)}`),
 
+  // FINANCIAMENTO
   buscarFinanciamentoPorEmail: (email: string) =>
     request<Cliente>(`/financiamento/email/${encodeURIComponent(email)}`),
 
+  // AGENDAR
   agendar: (dados: AgendamentoRequest) =>
     request("/agendamentos", {
       method: "POST",
       body: JSON.stringify(dados),
     }),
 
+  // AGENDAMENTOS DO CLIENTE
+  buscarAgendamentosCliente: (clienteId: number) =>
+    request(`/agendamentos/cliente/${clienteId}`),
+
   listarAgendamentos: (clienteId: number) =>
     request(`/agendamentos/cliente/${clienteId}`),
+
+  // TODOS OS AGENDAMENTOS (VENDEDOR)
+  listarTodosAgendamentos: () =>
+    request("/agendamentos"),
+
+  // DELETAR AGENDAMENTO
+  deletarAgendamento: (id: number) =>
+    request(`/agendamentos/${id}`, {
+      method: "DELETE",
+    }),
 };
 
 export const getAcompanhamento = api.buscarClientePorEmail;

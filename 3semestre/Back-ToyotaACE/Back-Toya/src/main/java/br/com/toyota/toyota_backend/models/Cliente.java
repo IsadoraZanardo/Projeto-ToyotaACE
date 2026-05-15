@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Cliente {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -57,5 +58,6 @@ public class Cliente {
     private Double taxaJuros;
     private String statusFinanciamento;
     private String statusGarantia;
+ 
     private String dataProximaRevisao;
 }
