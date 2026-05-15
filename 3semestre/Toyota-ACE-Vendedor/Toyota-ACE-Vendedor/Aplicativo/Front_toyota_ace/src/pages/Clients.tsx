@@ -1,14 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-  useAppContext,
-  type Client,
-} from "@/contexts/AppContext";
-
-import { type ClientStatus } from "@/lib/mock-data";
-
-import { api } from "@/services/api";
+import { api, type Cliente } from "@/services/api";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,6 +37,8 @@ import {
 
 import { toast } from "sonner";
 
+type ClientStatus = "lead" | "negociacao" | "fechado";
+
 const statusConfig: Record<
   ClientStatus,
   {
@@ -55,12 +50,10 @@ const statusConfig: Record<
     label: "Lead",
     className: "bg-blue-500/15 text-blue-400",
   },
-
   negociacao: {
     label: "Negociação",
     className: "bg-warning/15 text-yellow-400",
   },
-
   fechado: {
     label: "Fechado",
     className: "bg-success/15 text-green-400",
@@ -68,44 +61,67 @@ const statusConfig: Record<
 };
 
 const emptyClient = {
-  name: "",
+  nome: "",
   email: "",
-  password: "",
+  senha: "",
   cpf: "",
-  phone: "",
+  telefone: "",
   status: "lead" as ClientStatus,
-  vehicle: "",
-  lastContact: "Hoje",
+  modeloVeiculo: "",
 };
 
 const Clients = () => {
   const navigate = useNavigate();
 
-  const {
-    clients,
-    addClient,
-    updateClient,
-    deleteClient,
-    setSelectedClientId,
-  } = useAppContext();
-
+  const [clients, setClients] = useState<Cliente[]>([]);
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"az" | "za" | null>(null);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyClient);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(false);
+  const [loadingClients, setLoadingClients] = useState(false);
+
+  const carregarClientes = async () => {
+    try {
+      setLoadingClients(true);
+      const data = await api.listarClientes();
+      setClients(data);
+    } catch (error) {
+      console.error("Erro ao carregar clientes:", error);
+      toast.error("Erro ao carregar clientes do backend.");
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarClientes();
+  }, []);
 
   const filtered = clients
-    .filter(
-      (c) =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.vehicle.toLowerCase().includes(search.toLowerCase())
-    )
+    .filter((c) => {
+      const termo = search.toLowerCase();
+
+      return (
+        (c.nome || "").toLowerCase().includes(termo) ||
+        (c.email || "").toLowerCase().includes(termo) ||
+        (c.telefone || "").toLowerCase().includes(termo) ||
+        (c.modeloVeiculo || "").toLowerCase().includes(termo)
+      );
+    })
     .sort((a, b) => {
-      if (sortOrder === "az") return a.name.localeCompare(b.name);
-      if (sortOrder === "za") return b.name.localeCompare(a.name);
+      if (sortOrder === "az") {
+        return (a.nome || "").localeCompare(b.nome || "");
+      }
+
+      if (sortOrder === "za") {
+        return (b.nome || "").localeCompare(a.nome || "");
+      }
+
       return 0;
     });
 
@@ -115,31 +131,32 @@ const Clients = () => {
     setDialogOpen(true);
   };
 
-  const openEdit = (client: Client) => {
+  const openEdit = (client: Cliente) => {
+    if (!client.id) return;
+
     setEditingId(client.id);
 
     setForm({
-      name: client.name,
-      email: "",
-      password: "",
-      cpf: "",
-      phone: client.phone,
-      status: client.status,
-      vehicle: client.vehicle,
-      lastContact: client.lastContact,
+      nome: client.nome || "",
+      email: client.email || "",
+      senha: "",
+      cpf: client.cpf || "",
+      telefone: client.telefone || "",
+      status: "lead",
+      modeloVeiculo: client.modeloVeiculo || "",
     });
 
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.vehicle.trim()) {
-      toast.error("Preencha nome, telefone e veículo");
+    if (!form.nome.trim() || !form.telefone.trim()) {
+      toast.error("Preencha nome e telefone.");
       return;
     }
 
-    if (!editingId && (!form.email.trim() || !form.password.trim())) {
-      toast.error("Para criar acesso, preencha email e senha");
+    if (!editingId && (!form.email.trim() || !form.senha.trim())) {
+      toast.error("Para criar acesso, preencha email e senha.");
       return;
     }
 
@@ -147,31 +164,23 @@ const Clients = () => {
       setLoading(true);
 
       if (editingId) {
-        updateClient(editingId, {
-          name: form.name,
-          phone: form.phone,
-          status: form.status,
-          vehicle: form.vehicle,
-          lastContact: form.lastContact,
+        await api.atualizarCliente(editingId, {
+          nome: form.nome,
+          email: form.email,
+          cpf: form.cpf,
+          telefone: form.telefone,
+          modeloVeiculo: form.modeloVeiculo,
         });
 
         toast.success("Cliente atualizado!");
       } else {
         await api.cadastrar({
-          nome: form.name,
+          nome: form.nome,
           email: form.email,
-          senha: form.password,
+          senha: form.senha,
           cpf: form.cpf,
-          telefone: form.phone,
+          telefone: form.telefone,
           endereco: "",
-        });
-
-        addClient({
-          name: form.name,
-          phone: form.phone,
-          status: form.status,
-          vehicle: form.vehicle,
-          lastContact: form.lastContact,
         });
 
         toast.success("Cliente criado com acesso!");
@@ -179,27 +188,39 @@ const Clients = () => {
 
       setDialogOpen(false);
       setForm(emptyClient);
+      await carregarClientes();
     } catch (error) {
       console.error("Erro ao salvar cliente:", error);
 
       toast.error(
         error instanceof Error
           ? error.message
-          : "Erro ao salvar cliente no backend"
+          : "Erro ao salvar cliente no backend."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = (id: number) => {
-    deleteClient(id);
-    setDeleteConfirm(null);
-    toast.success("Cliente removido!");
+  const handleDelete = async (id: number) => {
+    try {
+      await api.deletarCliente(id);
+      setDeleteConfirm(null);
+      toast.success("Cliente removido!");
+      await carregarClientes();
+    } catch (error) {
+      console.error("Erro ao excluir cliente:", error);
+      toast.error("Erro ao excluir cliente.");
+    }
   };
 
-  const handleSelectVehicle = (clientId: number) => {
-    setSelectedClientId(clientId);
+  const handleSelectVehicle = (clientId?: number) => {
+    if (!clientId) {
+      toast.error("Cliente inválido.");
+      return;
+    }
+
+    localStorage.setItem("toyota_selected_client_id", String(clientId));
     navigate("/veiculos");
   };
 
@@ -257,81 +278,95 @@ const Clients = () => {
 
       {/* LISTA */}
       <div className="space-y-2">
-        {filtered.length === 0 && (
+        {loadingClients && (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Carregando clientes...
+          </p>
+        )}
+
+        {!loadingClients && filtered.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">
             Nenhum cliente encontrado.
           </p>
         )}
 
-        {filtered.map((c, i) => {
-          const status = statusConfig[c.status];
+        {!loadingClients &&
+          filtered.map((c, i) => {
+            const status = statusConfig[form.status] || statusConfig.lead;
 
-          return (
-            <div
-              key={c.id}
-              className={`p-4 rounded-lg border border-border bg-card hover:border-primary/30 transition-all animate-reveal-up delay-${Math.min(
-                i + 2,
-                5
-              )}`}
-            >
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-sm font-medium shrink-0">
-                    {c.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)}
+            return (
+              <div
+                key={c.id}
+                className={`p-4 rounded-lg border border-border bg-card hover:border-primary/30 transition-all animate-reveal-up delay-${Math.min(
+                  i + 2,
+                  5
+                )}`}
+              >
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  {/* ESQUERDA */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-sm font-medium shrink-0">
+                      {(c.nome || "?")
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{c.nome}</p>
+
+                      <p className="text-xs text-muted-foreground">
+                        {c.modeloVeiculo || "Sem veículo"} ·{" "}
+                        {c.telefone || c.email || "Sem contato"}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{c.name}</p>
+                  {/* DIREITA */}
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.className}`}
+                    >
+                      {status.label}
+                    </span>
 
-                    <p className="text-xs text-muted-foreground">
-                      {c.vehicle} · {c.lastContact}
-                    </p>
+                    <button
+                      onClick={() => handleSelectVehicle(c.id)}
+                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/15 transition-colors"
+                      title="Configurar veículo"
+                    >
+                      <Car className="h-4 w-4 text-muted-foreground" />
+                    </button>
+
+                    <button
+                      onClick={() => openEdit(c)}
+                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/15 transition-colors"
+                      title="Editar cliente"
+                    >
+                      <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+
+                    <button
+                      onClick={() => c.id && setDeleteConfirm(c.id)}
+                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-destructive/15 transition-colors"
+                      title="Excluir cliente"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+
+                    <a
+                      href={`tel:${c.telefone || ""}`}
+                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/15 transition-colors"
+                      title="Ligar"
+                    >
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                    </a>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.className}`}
-                  >
-                    {status.label}
-                  </span>
-
-                  <button
-                    onClick={() => handleSelectVehicle(c.id)}
-                    className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/15 transition-colors"
-                  >
-                    <Car className="h-4 w-4 text-muted-foreground" />
-                  </button>
-
-                  <button
-                    onClick={() => openEdit(c)}
-                    className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/15 transition-colors"
-                  >
-                    <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-
-                  <button
-                    onClick={() => setDeleteConfirm(c.id)}
-                    className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-destructive/15 transition-colors"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-
-                  <a
-                    href={`tel:${c.phone}`}
-                    className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/15 transition-colors"
-                  >
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                  </a>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
 
       {/* MODAL CLIENTE */}
@@ -352,77 +387,76 @@ const Clients = () => {
               <Label>Nome</Label>
 
               <Input
-                value={form.name}
+                value={form.nome}
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    name: e.target.value,
+                    nome: e.target.value,
                   })
                 }
                 placeholder="Nome completo"
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>Email</Label>
+
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    email: e.target.value,
+                  })
+                }
+                placeholder="cliente@email.com"
+                disabled={!!editingId}
+              />
+            </div>
+
             {!editingId && (
-              <>
-                <div className="space-y-2">
-                  <Label>Email de acesso</Label>
+              <div className="space-y-2">
+                <Label>Senha de acesso</Label>
 
-                  <Input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        email: e.target.value,
-                      })
-                    }
-                    placeholder="cliente@email.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Senha de acesso</Label>
-
-                  <Input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        password: e.target.value,
-                      })
-                    }
-                    placeholder="Ex: 123456"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>CPF</Label>
-
-                  <Input
-                    value={form.cpf}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        cpf: e.target.value,
-                      })
-                    }
-                    placeholder="000.000.000-00"
-                  />
-                </div>
-              </>
+                <Input
+                  type="password"
+                  value={form.senha}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      senha: e.target.value,
+                    })
+                  }
+                  placeholder="Ex: 123456"
+                />
+              </div>
             )}
+
+            <div className="space-y-2">
+              <Label>CPF</Label>
+
+              <Input
+                value={form.cpf}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    cpf: e.target.value,
+                  })
+                }
+                placeholder="000.000.000-00"
+              />
+            </div>
 
             <div className="space-y-2">
               <Label>Telefone</Label>
 
               <Input
-                value={form.phone}
+                value={form.telefone}
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    phone: e.target.value,
+                    telefone: e.target.value,
                   })
                 }
                 placeholder="(11) 99999-9999"
@@ -433,11 +467,11 @@ const Clients = () => {
               <Label>Veículo</Label>
 
               <Input
-                value={form.vehicle}
+                value={form.modeloVeiculo}
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    vehicle: e.target.value,
+                    modeloVeiculo: e.target.value,
                   })
                 }
                 placeholder="Ex: Corolla Cross"
