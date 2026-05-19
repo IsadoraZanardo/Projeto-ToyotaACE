@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { vehicles } from "@/lib/mock-data";
-import { api } from "@/services/api";
+import { api, type Cliente } from "@/services/api";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,18 @@ const vehicleColors = [
   { id: "vermelho", label: "Vermelho", hex: "#ef4444" },
 ];
 
+type AccessorizeState = {
+  seatMaterial: "tecido" | "couro" | "couro-sintetico";
+  selectedAccessories: string[];
+  selectedColor: string;
+};
+
+const defaultState: AccessorizeState = {
+  seatMaterial: "tecido",
+  selectedAccessories: [],
+  selectedColor: "branco",
+};
+
 const formatPrice = (value: number) =>
   value.toLocaleString("pt-BR", {
     style: "currency",
@@ -74,20 +86,8 @@ const parsePrice = (price: string) =>
       .trim()
   );
 
-type AccessorizeState = {
-  seatMaterial: "tecido" | "couro" | "couro-sintetico";
-  selectedAccessories: string[];
-  selectedColor: string;
-};
-
-const defaultState: AccessorizeState = {
-  seatMaterial: "tecido",
-  selectedAccessories: [],
-  selectedColor: "branco",
-};
-
 const Vehicles = () => {
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<Cliente[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [versionDialogOpen, setVersionDialogOpen] = useState(false);
@@ -122,6 +122,7 @@ const Vehicles = () => {
     statusVeiculo: "Pedido realizado",
     progressoVeiculo: "25",
     placaVeiculo: "",
+    vinIot: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -162,9 +163,8 @@ const Vehicles = () => {
     }));
   };
 
-  const getVehiclePrice = (id: number, defaultPrice: string) => {
-    return vehiclePrices[id] ? formatPrice(vehiclePrices[id]) : defaultPrice;
-  };
+  const getVehiclePrice = (id: number, defaultPrice: string) =>
+    vehiclePrices[id] ? formatPrice(vehiclePrices[id]) : defaultPrice;
 
   const totalAccessories = accessories
     .filter((a) => config.selectedAccessories.includes(a.id))
@@ -185,6 +185,11 @@ const Vehicles = () => {
     Object.values(vehicleVersions)
       .flat()
       .find((v) => v.price === baseVehiclePrice)?.label || "Versão padrão";
+
+  const acessoriosSelecionados = accessories
+    .filter((a) => config.selectedAccessories.includes(a.id))
+    .map((a) => a.label)
+    .join(", ");
 
   const calcularFinanciamento = () => {
     const valorTotal = totalFinal;
@@ -229,7 +234,8 @@ const Vehicles = () => {
 
       const calculo = calcularFinanciamento();
 
-      await api.atualizarVeiculo(Number(selectedClientId), {
+      await api.cadastrarVeiculo({
+        clienteId: Number(selectedClientId),
         modeloVeiculo: selectedVehicle.name,
         marcaVeiculo: "Toyota",
         anoVeiculo: String(selectedVehicle.year || "2026"),
@@ -257,9 +263,12 @@ const Vehicles = () => {
         statusFinanciamento: finance.statusFinanciamento,
         statusGarantia: finance.statusGarantia,
         dataProximaRevisao: finance.dataProximaRevisao,
+
+        acessorios: acessoriosSelecionados,
+        vinIot: finance.vinIot,
       });
 
-      toast.success("Veículo e financiamento salvos para o cliente!");
+      toast.success("Novo veículo cadastrado para o cliente!");
       setDialogOpen(false);
       localStorage.removeItem("toyota_selected_client_id");
     } catch (error) {
@@ -328,8 +337,8 @@ const Vehicles = () => {
           <DialogHeader>
             <DialogTitle>🚗 Configurar veículo · {selectedVehicle?.name}</DialogTitle>
             <DialogDescription>
-              Atribua o carro a um cliente e configure financiamento, status e
-              pós-venda.
+              Cadastre mais um veículo para um cliente e salve o financiamento
+              individual deste carro.
             </DialogDescription>
           </DialogHeader>
 
@@ -344,8 +353,8 @@ const Vehicles = () => {
 
                 <SelectContent>
                   {clients
-                    .filter((client: any) => client.id)
-                    .map((client: any) => (
+                    .filter((client) => client.id)
+                    .map((client) => (
                       <SelectItem key={client.id} value={String(client.id)}>
                         {client.nome} · {client.telefone || client.email}
                       </SelectItem>
@@ -433,78 +442,6 @@ const Vehicles = () => {
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4">
-              <div className="space-y-2">
-                <Label>Status do veículo</Label>
-
-                <Select
-                  value={finance.statusVeiculo}
-                  onValueChange={(value) =>
-                    setFinance({ ...finance, statusVeiculo: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    <SelectItem value="Pedido realizado">
-                      Pedido realizado
-                    </SelectItem>
-                    <SelectItem value="Em produção">Em produção</SelectItem>
-                    <SelectItem value="Inspeção">Inspeção</SelectItem>
-                    <SelectItem value="Pronto para retirada">
-                      Pronto para retirada
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Progresso do veículo (%)</Label>
-
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={finance.progressoVeiculo}
-                  onChange={(e) =>
-                    setFinance({
-                      ...finance,
-                      progressoVeiculo: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Placa</Label>
-
-                <Input
-                  placeholder="Opcional"
-                  value={finance.placaVeiculo}
-                  onChange={(e) =>
-                    setFinance({ ...finance, placaVeiculo: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Próxima revisão</Label>
-
-                <Input
-                  type="date"
-                  value={finance.dataProximaRevisao}
-                  onChange={(e) =>
-                    setFinance({
-                      ...finance,
-                      dataProximaRevisao: e.target.value,
-                    })
-                  }
-                />
               </div>
             </div>
 
@@ -625,6 +562,10 @@ const Vehicles = () => {
               <p>
                 <strong>Versão:</strong> {selectedVersionLabel}
               </p>
+              <p>
+                <strong>Acessórios escolhidos:</strong>{" "}
+                {acessoriosSelecionados || "Nenhum"}
+              </p>
             </div>
           </div>
 
@@ -635,7 +576,7 @@ const Vehicles = () => {
 
             <Button onClick={handleSalvarConfiguracao} disabled={loading}>
               <Save className="h-4 w-4 mr-1" />
-              {loading ? "Salvando..." : "Salvar configuração"}
+              {loading ? "Salvando..." : "Salvar novo veículo"}
             </Button>
           </DialogFooter>
         </DialogContent>

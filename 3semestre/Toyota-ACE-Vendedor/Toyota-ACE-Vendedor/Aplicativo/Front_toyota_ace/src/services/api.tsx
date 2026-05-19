@@ -9,6 +9,11 @@ export type Cliente = {
   cpf?: string;
   telefone?: string;
   endereco?: string;
+};
+
+export type Veiculo = {
+  id?: number;
+  cliente?: Cliente;
 
   modeloVeiculo?: string;
   marcaVeiculo?: string;
@@ -34,6 +39,9 @@ export type Cliente = {
   statusFinanciamento?: string;
   statusGarantia?: string;
   dataProximaRevisao?: string;
+
+  acessorios?: string;
+  vinIot?: string;
 };
 
 export type CadastroRequest = {
@@ -46,11 +54,13 @@ export type CadastroRequest = {
 };
 
 export type VeiculoRequest = {
+  clienteId: number;
+
   modeloVeiculo: string;
   marcaVeiculo: string;
   anoVeiculo: string;
   corVeiculo: string;
-  placaVeiculo: string;
+  placaVeiculo?: string;
   motorVeiculo: string;
   combustivelVeiculo: string;
   cambioVeiculo: string;
@@ -62,17 +72,17 @@ export type VeiculoRequest = {
   valorTotal?: number;
   valorEntrada?: number;
   valorFinanciado?: number;
-
   parcelasTotais?: number;
   parcelasPagas?: number;
   parcelasRestantes?: number;
-
   valorParcela?: number;
   taxaJuros?: number;
-
   statusFinanciamento?: string;
   statusGarantia?: string;
   dataProximaRevisao?: string;
+
+  acessorios?: string;
+  vinIot?: string;
 };
 
 async function request<T>(
@@ -125,12 +135,26 @@ export const api = {
       method: "DELETE",
     }),
 
-  atualizarVeiculo: (clienteId: number, dados: VeiculoRequest) =>
-    request<Cliente>(`/veiculo/${clienteId}`, {
+  cadastrarVeiculo: (dados: VeiculoRequest) =>
+    request<Veiculo>("/veiculos", {
+      method: "POST",
+      body: JSON.stringify(dados),
+    }),
+
+  listarVeiculosCliente: (clienteId: number) =>
+    request<Veiculo[]>(`/veiculos/cliente/${clienteId}`),
+
+  buscarVeiculo: (veiculoId: number) =>
+    request<Veiculo>(`/veiculos/${veiculoId}`),
+
+  atualizarVeiculo: (veiculoId: number, dados: Partial<VeiculoRequest>) =>
+    request<Veiculo>(`/veiculos/${veiculoId}`, {
       method: "PUT",
       body: JSON.stringify(dados),
     }),
 
-  buscarVeiculo: (clienteId: number) =>
-    request<Cliente>(`/veiculo/${clienteId}`),
+  deletarVeiculo: (veiculoId: number) =>
+    request<void>(`/veiculos/${veiculoId}`, {
+      method: "DELETE",
+    }),
 };
