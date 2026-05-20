@@ -24,7 +24,7 @@ const AppLayout = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-black">
+      <div className="min-h-screen flex w-full bg-background text-foreground">
         <AppSidebar />
 
         <div className="flex-1 flex flex-col min-w-0 min-h-screen">
@@ -38,10 +38,9 @@ const AppLayout = () => {
             <Outlet />
           </main>
 
-          <footer className="border-t border-zinc-800 bg-black">
-            <div className="h-20 flex items-center justify-center text-sm text-gray-400">
-              © {new Date().getFullYear()} Toyota do Brasil — Todos os direitos
-              reservados
+          <footer className="border-t border-border bg-background">
+            <div className="h-20 flex items-center justify-center text-sm text-muted-foreground">
+              © {new Date().getFullYear()} Toyota do Brasil — Todos os direitos reservados
             </div>
           </footer>
         </div>

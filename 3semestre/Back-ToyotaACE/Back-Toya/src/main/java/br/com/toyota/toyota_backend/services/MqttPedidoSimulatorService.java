@@ -49,7 +49,7 @@ public class MqttPedidoSimulatorService {
 
                     publisher.publish(payload);
 
-                    Thread.sleep(5000);
+                    Thread.sleep(10000);
                 }
             } catch (Exception e) {
                 System.out.println("ERRO NO SIMULADOR MQTT:");
