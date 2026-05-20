@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { api, type Cliente } from "@/services/api";
+import { api, type Cliente, type Veiculo } from "@/services/api";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import {
   ArrowUpAZ,
   ArrowDownAZ,
   Car,
+  Eye,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -67,20 +68,63 @@ const emptyClient = {
   cpf: "",
   telefone: "",
   status: "lead" as ClientStatus,
-  modeloVeiculo: "",
 };
+
+const emptyVehicle = {
+  modeloVeiculo: "",
+  marcaVeiculo: "Toyota",
+  anoVeiculo: "",
+  corVeiculo: "",
+  motorVeiculo: "",
+  combustivelVeiculo: "",
+  cambioVeiculo: "",
+  fotoCarroUrl: "",
+  valorTotal: "",
+  valorEntrada: "",
+  valorFinanciado: "",
+  parcelasTotais: "",
+  parcelasPagas: "",
+  parcelasRestantes: "",
+  valorParcela: "",
+  taxaJuros: "",
+  statusFinanciamento: "",
+  statusGarantia: "",
+  dataProximaRevisao: "",
+  acessorios: "",
+};
+
+const formatMoney = (value?: number) =>
+  Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 
 const Clients = () => {
   const navigate = useNavigate();
 
   const [clients, setClients] = useState<Cliente[]>([]);
+  const [vehiclesByClient, setVehiclesByClient] = useState<
+    Record<number, Veiculo[]>
+  >({});
+
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"az" | "za" | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [vehiclesDialogOpen, setVehiclesDialogOpen] = useState(false);
+  const [vehicleEditOpen, setVehicleEditOpen] = useState(false);
+
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Cliente | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<Veiculo | null>(null);
+
   const [form, setForm] = useState(emptyClient);
+  const [vehicleForm, setVehicleForm] = useState(emptyVehicle);
+
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [deleteVehicleConfirm, setDeleteVehicleConfirm] = useState<number | null>(
+    null
+  );
 
   const [loading, setLoading] = useState(false);
   const [loadingClients, setLoadingClients] = useState(false);
@@ -88,8 +132,26 @@ const Clients = () => {
   const carregarClientes = async () => {
     try {
       setLoadingClients(true);
+
       const data = await api.listarClientes();
       setClients(data);
+
+      const vehiclesMap: Record<number, Veiculo[]> = {};
+
+      await Promise.all(
+        data.map(async (cliente) => {
+          if (!cliente.id) return;
+
+          try {
+            const veiculos = await api.listarVeiculosCliente(cliente.id);
+            vehiclesMap[cliente.id] = veiculos;
+          } catch {
+            vehiclesMap[cliente.id] = [];
+          }
+        })
+      );
+
+      setVehiclesByClient(vehiclesMap);
     } catch (error) {
       console.error("Erro ao carregar clientes:", error);
       toast.error("Erro ao carregar clientes do backend.");
@@ -105,23 +167,20 @@ const Clients = () => {
   const filtered = clients
     .filter((c) => {
       const termo = search.toLowerCase();
+      const veiculos = c.id ? vehiclesByClient[c.id] || [] : [];
 
       return (
         (c.nome || "").toLowerCase().includes(termo) ||
         (c.email || "").toLowerCase().includes(termo) ||
         (c.telefone || "").toLowerCase().includes(termo) ||
-        (c.modeloVeiculo || "").toLowerCase().includes(termo)
+        veiculos.some((v) =>
+          (v.modeloVeiculo || "").toLowerCase().includes(termo)
+        )
       );
     })
     .sort((a, b) => {
-      if (sortOrder === "az") {
-        return (a.nome || "").localeCompare(b.nome || "");
-      }
-
-      if (sortOrder === "za") {
-        return (b.nome || "").localeCompare(a.nome || "");
-      }
-
+      if (sortOrder === "az") return (a.nome || "").localeCompare(b.nome || "");
+      if (sortOrder === "za") return (b.nome || "").localeCompare(a.nome || "");
       return 0;
     });
 
@@ -143,10 +202,43 @@ const Clients = () => {
       cpf: client.cpf || "",
       telefone: client.telefone || "",
       status: "lead",
-      modeloVeiculo: client.modeloVeiculo || "",
     });
 
     setDialogOpen(true);
+  };
+
+  const openVehicles = (client: Cliente) => {
+    setSelectedClient(client);
+    setVehiclesDialogOpen(true);
+  };
+
+  const openEditVehicle = (vehicle: Veiculo) => {
+    setSelectedVehicle(vehicle);
+
+    setVehicleForm({
+      modeloVeiculo: vehicle.modeloVeiculo || "",
+      marcaVeiculo: vehicle.marcaVeiculo || "Toyota",
+      anoVeiculo: vehicle.anoVeiculo || "",
+      corVeiculo: vehicle.corVeiculo || "",
+      motorVeiculo: vehicle.motorVeiculo || "",
+      combustivelVeiculo: vehicle.combustivelVeiculo || "",
+      cambioVeiculo: vehicle.cambioVeiculo || "",
+      fotoCarroUrl: vehicle.fotoCarroUrl || "",
+      valorTotal: String(vehicle.valorTotal || ""),
+      valorEntrada: String(vehicle.valorEntrada || ""),
+      valorFinanciado: String(vehicle.valorFinanciado || ""),
+      parcelasTotais: String(vehicle.parcelasTotais || ""),
+      parcelasPagas: String(vehicle.parcelasPagas || ""),
+      parcelasRestantes: String(vehicle.parcelasRestantes || ""),
+      valorParcela: String(vehicle.valorParcela || ""),
+      taxaJuros: String(vehicle.taxaJuros || ""),
+      statusFinanciamento: vehicle.statusFinanciamento || "",
+      statusGarantia: vehicle.statusGarantia || "",
+      dataProximaRevisao: vehicle.dataProximaRevisao || "",
+      acessorios: vehicle.acessorios || "",
+    });
+
+    setVehicleEditOpen(true);
   };
 
   const handleSave = async () => {
@@ -169,7 +261,6 @@ const Clients = () => {
           email: form.email,
           cpf: form.cpf,
           telefone: form.telefone,
-          modeloVeiculo: form.modeloVeiculo,
         });
 
         toast.success("Cliente atualizado!");
@@ -202,6 +293,52 @@ const Clients = () => {
     }
   };
 
+  const handleSaveVehicle = async () => {
+    if (!selectedVehicle?.id) {
+      toast.error("Veículo inválido.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await api.atualizarVeiculo(selectedVehicle.id, {
+        modeloVeiculo: vehicleForm.modeloVeiculo,
+        marcaVeiculo: vehicleForm.marcaVeiculo,
+        anoVeiculo: vehicleForm.anoVeiculo,
+        corVeiculo: vehicleForm.corVeiculo,
+        motorVeiculo: vehicleForm.motorVeiculo,
+        combustivelVeiculo: vehicleForm.combustivelVeiculo,
+        cambioVeiculo: vehicleForm.cambioVeiculo,
+        fotoCarroUrl: vehicleForm.fotoCarroUrl,
+        valorTotal: Number(vehicleForm.valorTotal || 0),
+        valorEntrada: Number(vehicleForm.valorEntrada || 0),
+        valorFinanciado: Number(vehicleForm.valorFinanciado || 0),
+        parcelasTotais: Number(vehicleForm.parcelasTotais || 0),
+        parcelasPagas: Number(vehicleForm.parcelasPagas || 0),
+        parcelasRestantes: Number(vehicleForm.parcelasRestantes || 0),
+        valorParcela: Number(vehicleForm.valorParcela || 0),
+        taxaJuros: Number(vehicleForm.taxaJuros || 0),
+        statusFinanciamento: vehicleForm.statusFinanciamento,
+        statusGarantia: vehicleForm.statusGarantia,
+        dataProximaRevisao: vehicleForm.dataProximaRevisao,
+        acessorios: vehicleForm.acessorios,
+      });
+
+      toast.success("Veículo atualizado!");
+      setVehicleEditOpen(false);
+      await carregarClientes();
+    } catch (error) {
+      console.error("Erro ao atualizar veículo:", error);
+
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao atualizar veículo."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     try {
       await api.deletarCliente(id);
@@ -214,7 +351,19 @@ const Clients = () => {
     }
   };
 
-  const handleSelectVehicle = (clientId?: number) => {
+  const handleDeleteVehicle = async (id: number) => {
+    try {
+      await api.deletarVeiculo(id);
+      setDeleteVehicleConfirm(null);
+      toast.success("Veículo removido!");
+      await carregarClientes();
+    } catch (error) {
+      console.error("Erro ao excluir veículo:", error);
+      toast.error("Erro ao excluir veículo.");
+    }
+  };
+
+  const handleAddVehicle = (clientId?: number) => {
     if (!clientId) {
       toast.error("Cliente inválido.");
       return;
@@ -226,7 +375,6 @@ const Clients = () => {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="animate-reveal-up">
           <h1 className="text-xl font-semibold">Clientes</h1>
@@ -245,7 +393,6 @@ const Clients = () => {
         </Button>
       </div>
 
-      {/* BUSCA */}
       <div className="flex gap-2 animate-reveal-up delay-1">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -276,7 +423,6 @@ const Clients = () => {
         </Button>
       </div>
 
-      {/* LISTA */}
       <div className="space-y-2">
         {loadingClients && (
           <p className="text-sm text-muted-foreground text-center py-8">
@@ -292,7 +438,12 @@ const Clients = () => {
 
         {!loadingClients &&
           filtered.map((c, i) => {
-            const status = statusConfig[form.status] || statusConfig.lead;
+            const status = statusConfig.lead;
+            const veiculos = c.id ? vehiclesByClient[c.id] || [] : [];
+            const resumoVeiculos =
+              veiculos.length === 0
+                ? "Sem veículo"
+                : `${veiculos.length} veículo(s)`;
 
             return (
               <div
@@ -303,7 +454,6 @@ const Clients = () => {
                 )}`}
               >
                 <div className="flex items-center justify-between gap-4 flex-wrap">
-                  {/* ESQUERDA */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-sm font-medium shrink-0">
                       {(c.nome || "?")
@@ -317,13 +467,11 @@ const Clients = () => {
                       <p className="font-medium text-sm truncate">{c.nome}</p>
 
                       <p className="text-xs text-muted-foreground">
-                        {c.modeloVeiculo || "Sem veículo"} ·{" "}
-                        {c.telefone || c.email || "Sem contato"}
+                        {resumoVeiculos} · {c.telefone || c.email || "Sem contato"}
                       </p>
                     </div>
                   </div>
 
-                  {/* DIREITA */}
                   <div className="flex items-center gap-2">
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.className}`}
@@ -332,9 +480,17 @@ const Clients = () => {
                     </span>
 
                     <button
-                      onClick={() => handleSelectVehicle(c.id)}
+                      onClick={() => openVehicles(c)}
                       className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/15 transition-colors"
-                      title="Configurar veículo"
+                      title="Ver veículos"
+                    >
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </button>
+
+                    <button
+                      onClick={() => handleAddVehicle(c.id)}
+                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary/15 transition-colors"
+                      title="Adicionar veículo"
                     >
                       <Car className="h-4 w-4 text-muted-foreground" />
                     </button>
@@ -369,7 +525,393 @@ const Clients = () => {
           })}
       </div>
 
-      {/* MODAL CLIENTE */}
+      <Dialog open={vehiclesDialogOpen} onOpenChange={setVehiclesDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Veículos de {selectedClient?.nome}</DialogTitle>
+            <DialogDescription>
+              Visualize, edite ou remova veículos vinculados a este cliente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {selectedClient?.id &&
+              (vehiclesByClient[selectedClient.id] || []).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Nenhum veículo cadastrado para este cliente.
+                </p>
+              )}
+
+            {selectedClient?.id &&
+              (vehiclesByClient[selectedClient.id] || []).map((vehicle) => (
+                <div
+                  key={vehicle.id}
+                  className="rounded-lg border border-border bg-card overflow-hidden"
+                >
+                  <div className="flex gap-4 p-4 items-center">
+                    {vehicle.fotoCarroUrl ? (
+                      <img
+                        src={vehicle.fotoCarroUrl}
+                        alt={vehicle.modeloVeiculo || "Veículo"}
+                        className="w-28 h-20 object-cover rounded-lg bg-secondary"
+                      />
+                    ) : (
+                      <div className="w-28 h-20 rounded-lg bg-secondary flex items-center justify-center">
+                        <Car className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold">
+                        {vehicle.modeloVeiculo || "Veículo sem modelo"}
+                      </p>
+
+                      <p className="text-xs text-muted-foreground">
+                        {vehicle.anoVeiculo || "Ano não informado"} ·{" "}
+                        {vehicle.corVeiculo || "Cor não informada"} · Chassi:{" "}
+                        {vehicle.chassiVeiculo || "Não informado"}
+                      </p>
+
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total: {formatMoney(vehicle.valorTotal)} · Parcela:{" "}
+                        {formatMoney(vehicle.valorParcela)}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditVehicle(vehicle)}
+                      >
+                        <Edit2 className="h-3.5 w-3.5 mr-1" />
+                        Editar
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() =>
+                          vehicle.id && setDeleteVehicleConfirm(vehicle.id)
+                        }
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setVehiclesDialogOpen(false)}
+            >
+              Fechar
+            </Button>
+
+            <Button onClick={() => handleAddVehicle(selectedClient?.id)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar veículo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={vehicleEditOpen} onOpenChange={setVehicleEditOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar veículo</DialogTitle>
+            <DialogDescription>
+              Edite os dados técnicos e financeiros deste veículo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Modelo</Label>
+              <Input
+                value={vehicleForm.modeloVeiculo}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    modeloVeiculo: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Marca</Label>
+              <Input
+                value={vehicleForm.marcaVeiculo}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    marcaVeiculo: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ano</Label>
+              <Input
+                value={vehicleForm.anoVeiculo}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    anoVeiculo: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Cor</Label>
+              <Input
+                value={vehicleForm.corVeiculo}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    corVeiculo: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Motor</Label>
+              <Input
+                value={vehicleForm.motorVeiculo}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    motorVeiculo: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Combustível</Label>
+              <Input
+                value={vehicleForm.combustivelVeiculo}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    combustivelVeiculo: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Câmbio</Label>
+              <Input
+                value={vehicleForm.cambioVeiculo}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    cambioVeiculo: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Foto URL</Label>
+              <Input
+                value={vehicleForm.fotoCarroUrl}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    fotoCarroUrl: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Valor total</Label>
+              <Input
+                type="number"
+                value={vehicleForm.valorTotal}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    valorTotal: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Entrada</Label>
+              <Input
+                type="number"
+                value={vehicleForm.valorEntrada}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    valorEntrada: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Valor financiado</Label>
+              <Input
+                type="number"
+                value={vehicleForm.valorFinanciado}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    valorFinanciado: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Valor parcela</Label>
+              <Input
+                type="number"
+                value={vehicleForm.valorParcela}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    valorParcela: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Parcelas totais</Label>
+              <Input
+                type="number"
+                value={vehicleForm.parcelasTotais}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    parcelasTotais: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Parcelas pagas</Label>
+              <Input
+                type="number"
+                value={vehicleForm.parcelasPagas}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    parcelasPagas: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Parcelas restantes</Label>
+              <Input
+                type="number"
+                value={vehicleForm.parcelasRestantes}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    parcelasRestantes: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Taxa de juros</Label>
+              <Input
+                type="number"
+                value={vehicleForm.taxaJuros}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    taxaJuros: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status financiamento</Label>
+              <Input
+                value={vehicleForm.statusFinanciamento}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    statusFinanciamento: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status garantia</Label>
+              <Input
+                value={vehicleForm.statusGarantia}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    statusGarantia: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Próxima revisão</Label>
+              <Input
+                type="date"
+                value={vehicleForm.dataProximaRevisao}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    dataProximaRevisao: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Acessórios</Label>
+              <Input
+                value={vehicleForm.acessorios}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    acessorios: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVehicleEditOpen(false)}>
+              Cancelar
+            </Button>
+
+            <Button onClick={handleSaveVehicle} disabled={loading}>
+              {loading ? "Salvando..." : "Salvar veículo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -462,45 +1004,6 @@ const Clients = () => {
                 placeholder="(11) 99999-9999"
               />
             </div>
-
-            <div className="space-y-2">
-              <Label>Veículo</Label>
-
-              <Input
-                value={form.modeloVeiculo}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    modeloVeiculo: e.target.value,
-                  })
-                }
-                placeholder="Ex: Corolla Cross"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Status</Label>
-
-              <Select
-                value={form.status}
-                onValueChange={(v) =>
-                  setForm({
-                    ...form,
-                    status: v as ClientStatus,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-
-                <SelectContent>
-                  <SelectItem value="lead">Lead</SelectItem>
-                  <SelectItem value="negociacao">Negociação</SelectItem>
-                  <SelectItem value="fechado">Fechado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           <DialogFooter>
@@ -519,7 +1022,6 @@ const Clients = () => {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL EXCLUIR */}
       <Dialog
         open={deleteConfirm !== null}
         onOpenChange={() => setDeleteConfirm(null)}
@@ -541,6 +1043,39 @@ const Clients = () => {
             <Button
               variant="destructive"
               onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteVehicleConfirm !== null}
+        onOpenChange={() => setDeleteVehicleConfirm(null)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir veículo</DialogTitle>
+
+            <DialogDescription>
+              Tem certeza que deseja remover este veículo?
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteVehicleConfirm(null)}
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deleteVehicleConfirm && handleDeleteVehicle(deleteVehicleConfirm)
+              }
             >
               Excluir
             </Button>

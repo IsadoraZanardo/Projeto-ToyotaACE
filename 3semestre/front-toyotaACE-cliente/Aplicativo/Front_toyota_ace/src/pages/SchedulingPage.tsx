@@ -332,12 +332,7 @@ const SchedulingPage = () => {
         </div>
       </main>
 
-      <footer className="bg-black border-t border-border">
-        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} Toyota do Brasil — Todos os direitos
-          reservados
-        </div>
-      </footer>
+      
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">

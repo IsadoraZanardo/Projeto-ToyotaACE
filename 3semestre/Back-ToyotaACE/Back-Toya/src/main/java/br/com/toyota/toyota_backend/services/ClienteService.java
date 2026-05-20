@@ -15,16 +15,19 @@ import java.util.UUID;
 
 @Service
 public class ClienteService {
-
+    private final MqttPedidoSimulatorService mqttPedidoSimulatorService;
     private final ClienteRepository clienteRepository;
     private final VeiculoRepository veiculoRepository;
+    
 
     public ClienteService(
-            ClienteRepository clienteRepository,
-            VeiculoRepository veiculoRepository
+        ClienteRepository clienteRepository,
+        VeiculoRepository veiculoRepository,
+        MqttPedidoSimulatorService mqttPedidoSimulatorService
     ) {
         this.clienteRepository = clienteRepository;
         this.veiculoRepository = veiculoRepository;
+        this.mqttPedidoSimulatorService = mqttPedidoSimulatorService;
     }
 
     // =========================
@@ -159,7 +162,11 @@ public class ClienteService {
 
         veiculo.setCliente(cliente);
 
-        return veiculoRepository.save(veiculo);
+        Veiculo salvo = veiculoRepository.save(veiculo);
+
+        mqttPedidoSimulatorService.iniciarFluxo(salvo);
+
+        return salvo;
     }
 
     public Veiculo atualizarVeiculoNovo(

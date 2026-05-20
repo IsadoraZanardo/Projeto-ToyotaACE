@@ -8,6 +8,11 @@ export type Cliente = {
   cpf?: string;
   telefone?: string;
   endereco?: string;
+};
+
+export type Veiculo = {
+  id?: number;
+
   modeloVeiculo?: string;
   marcaVeiculo?: string;
   anoVeiculo?: string;
@@ -20,6 +25,7 @@ export type Cliente = {
   fotoCarroUrl?: string;
   statusVeiculo?: string;
   progressoVeiculo?: number;
+
   valorTotal?: number;
   valorEntrada?: number;
   valorFinanciado?: number;
@@ -31,6 +37,20 @@ export type Cliente = {
   statusFinanciamento?: string;
   statusGarantia?: string;
   dataProximaRevisao?: string;
+
+  acessorios?: string;
+  vinIot?: string;
+};
+
+export type Compra = {
+  id?: number;
+  produto: string;
+  quantidade: number;
+  preco: number;
+  total: number;
+  metodoPagamento: string;
+  statusPedido?: string;
+  dataCompra?: string;
 };
 
 export type LoginRequest = {
@@ -77,9 +97,7 @@ async function request<T>(
     } catch {
       try {
         message = await response.text();
-      } catch {
-        // mantém mensagem padrão
-      }
+      } catch {}
     }
 
     throw new Error(message || `Erro ${response.status}`);
@@ -93,21 +111,18 @@ async function request<T>(
 }
 
 export const api = {
-  // LOGIN
   login: (dados: LoginRequest) =>
     request<Cliente>("/clientes/login", {
       method: "POST",
       body: JSON.stringify(dados),
     }),
 
-  // CADASTRO
   cadastrar: (dados: CadastroRequest) =>
     request<Cliente>("/clientes/cadastro", {
       method: "POST",
       body: JSON.stringify(dados),
     }),
 
-  // CLIENTE
   buscarClientePorEmail: (email: string) =>
     request<Cliente>(`/clientes/${encodeURIComponent(email)}`),
 
@@ -117,33 +132,54 @@ export const api = {
       body: JSON.stringify(dados),
     }),
 
-  // VEÍCULO
-  buscarVeiculoPorEmail: (email: string) =>
-    request<Cliente>(`/veiculo/email/${encodeURIComponent(email)}`),
+  atualizarVeiculo: (veiculoId: number, dados: Partial<Veiculo>) =>
+    request<Veiculo>(`/veiculos/${veiculoId}`, {
+      method: "PUT",
+      body: JSON.stringify(dados),
+    }),
 
-  // FINANCIAMENTO
-  buscarFinanciamentoPorEmail: (email: string) =>
-    request<Cliente>(`/financiamento/email/${encodeURIComponent(email)}`),
+  listarVeiculosCliente: (clienteId: number) =>
+    request<Veiculo[]>(`/veiculos/cliente/${clienteId}`),
 
-  // AGENDAR
+  buscarVeiculo: (veiculoId: number) =>
+    request<Veiculo>(`/veiculos/${veiculoId}`),
+
+  criarCompra: (dados: {
+    clienteId: number;
+    produto: string;
+    quantidade: number;
+    preco: number;
+    total: number;
+    metodoPagamento: string;
+  }) =>
+    request<Compra>("/compras", {
+      method: "POST",
+      body: JSON.stringify(dados),
+    }),
+
+  listarComprasCliente: (clienteId: number) =>
+    request<Compra[]>(`/compras/cliente/${clienteId}`),
+
+  limparComprasCliente: (clienteId: number) =>
+    request<void>(`/compras/cliente/${clienteId}`, {
+      method: "DELETE",
+    }),
+    
   agendar: (dados: AgendamentoRequest) =>
     request("/agendamentos", {
       method: "POST",
       body: JSON.stringify(dados),
     }),
 
-  // AGENDAMENTOS DO CLIENTE
   buscarAgendamentosCliente: (clienteId: number) =>
     request(`/agendamentos/cliente/${clienteId}`),
 
   listarAgendamentos: (clienteId: number) =>
     request(`/agendamentos/cliente/${clienteId}`),
 
-  // TODOS OS AGENDAMENTOS (VENDEDOR)
   listarTodosAgendamentos: () =>
     request("/agendamentos"),
 
-  // DELETAR AGENDAMENTO
   deletarAgendamento: (id: number) =>
     request(`/agendamentos/${id}`, {
       method: "DELETE",

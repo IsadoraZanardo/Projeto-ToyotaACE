@@ -1,6 +1,10 @@
 import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/services/api";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+
 import {
   Dialog,
   DialogContent,
@@ -9,6 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+
 import {
   Select,
   SelectContent,
@@ -16,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import {
   ShoppingCart,
   ChevronLeft,
@@ -27,6 +33,7 @@ import {
   Minus,
   CheckCircle2,
 } from "lucide-react";
+
 import { toast } from "sonner";
 
 type Product = {
@@ -112,11 +119,14 @@ const formatPrice = (value: number) => {
 };
 
 const ShopPage = () => {
+  const { user } = useAuth();
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const promotion = promotions[currentSlide];
 
@@ -183,7 +193,12 @@ const ShopPage = () => {
     toast.success("Produto removido do carrinho.");
   };
 
-  const finishPurchase = () => {
+  const finishPurchase = async () => {
+    if (!user?.id) {
+      toast.error("Faça login para finalizar a compra.");
+      return;
+    }
+
     if (cart.length === 0) {
       toast.error("Seu carrinho está vazio.");
       return;
@@ -194,25 +209,33 @@ const ShopPage = () => {
       return;
     }
 
-    const newPurchase = {
-      id: Date.now(),
-      date: new Date().toLocaleDateString("pt-BR"),
-      items: cart,
-      total,
-      paymentMethod,
-    };
+    try {
+      setLoading(true);
 
-    const savedPurchases = JSON.parse(
-      localStorage.getItem("toyota_purchases") || "[]"
-    );
+      for (const item of cart) {
+        await api.criarCompra({
+          clienteId: user.id,
+          produto: item.name,
+          quantidade: item.quantity,
+          preco: item.price,
+          total: item.price * item.quantity,
+          metodoPagamento: paymentMethod,
+        });
+      }
 
-    localStorage.setItem(
-      "toyota_purchases",
-      JSON.stringify([...savedPurchases, newPurchase])
-    );
+      setCartOpen(false);
+      setSuccessOpen(true);
 
-    setCartOpen(false);
-    setSuccessOpen(true);
+      toast.success("Compra registrada com sucesso!");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro ao registrar compra."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetPurchase = () => {
@@ -275,11 +298,11 @@ const ShopPage = () => {
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 flex items-center justify-center">
+            <div className="flex justify-center">
               <img
                 src={promotion.image}
                 alt={promotion.title}
-                className="max-h-40 object-contain"
+                className="max-h-48 object-contain bg-white rounded-xl p-6"
               />
             </div>
           </div>
@@ -287,7 +310,7 @@ const ShopPage = () => {
           <button
             type="button"
             onClick={prevSlide}
-            className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-2"
+            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -295,7 +318,7 @@ const ShopPage = () => {
           <button
             type="button"
             onClick={nextSlide}
-            className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-2"
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -307,9 +330,7 @@ const ShopPage = () => {
                 key={item.id}
                 onClick={() => setCurrentSlide(index)}
                 className={`h-2 rounded-full transition-all ${
-                  currentSlide === index
-                    ? "w-8 bg-red-600"
-                    : "w-2 bg-white/40"
+                  currentSlide === index ? "w-8 bg-red-600" : "w-2 bg-white/40"
                 }`}
               />
             ))}
@@ -388,7 +409,7 @@ const ShopPage = () => {
           <DialogHeader>
             <DialogTitle>Carrinho de compras</DialogTitle>
             <DialogDescription>
-              Simule sua compra de produtos Toyota.
+              Finalize sua compra de produtos Toyota.
             </DialogDescription>
           </DialogHeader>
 
@@ -459,43 +480,44 @@ const ShopPage = () => {
                 ))}
               </div>
 
-              <div className="rounded-lg border p-4 space-y-3">
+              <div className="rounded-lg bg-muted p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
 
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm text-green-600">
                   <span>Desconto</span>
-                  <span className="text-green-600">
-                    - {formatPrice(discount)}
-                  </span>
+                  <span>- {formatPrice(discount)}</span>
                 </div>
 
-                <div className="border-t pt-3 flex justify-between font-bold text-lg">
+                <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
                   <span>{formatPrice(total)}</span>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Forma de pagamento</p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Forma de pagamento</p>
 
-                  <Select
-                    value={paymentMethod}
-                    onValueChange={setPaymentMethod}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o pagamento" />
-                    </SelectTrigger>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma forma de pagamento" />
+                  </SelectTrigger>
 
-                    <SelectContent>
-                      <SelectItem value="pix">Pix</SelectItem>
-                      <SelectItem value="credito">Cartão de crédito</SelectItem>
-                      <SelectItem value="debito">Cartão de débito</SelectItem>
-                      <SelectItem value="boleto">Boleto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <SelectContent>
+                    <SelectItem value="pix">Pix</SelectItem>
+                    <SelectItem value="credito">Cartão de crédito</SelectItem>
+                    <SelectItem value="debito">Cartão de débito</SelectItem>
+                    <SelectItem value="boleto">Boleto</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {paymentMethod && (
+                  <p className="text-xs text-muted-foreground">
+                    Pagamento selecionado: {paymentLabel(paymentMethod)}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -507,60 +529,42 @@ const ShopPage = () => {
 
             <Button
               onClick={finishPurchase}
-              disabled={cart.length === 0}
+              disabled={loading || cart.length === 0}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Finalizar compra
+              {loading ? "Finalizando..." : "Finalizar compra"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
-        <DialogContent className="sm:max-w-md text-center">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-green-500/15 flex items-center justify-center">
-              <CheckCircle2 className="h-10 w-10 text-green-600" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-9 w-9 text-green-600" />
             </div>
 
-            <DialogTitle>Compra simulada com sucesso!</DialogTitle>
+            <DialogTitle className="text-center">
+              Compra registrada!
+            </DialogTitle>
 
-            <DialogDescription>
-              Seu pedido Toyota foi salvo no histórico do perfil.
+            <DialogDescription className="text-center">
+              Sua compra foi salva no sistema e poderá ser consultada no seu
+              perfil.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="rounded-lg border p-4 text-left space-y-2">
-            <p className="text-sm">
-              <strong>Total:</strong> {formatPrice(total)}
-            </p>
-
-            <p className="text-sm">
-              <strong>Pagamento:</strong> {paymentLabel(paymentMethod)}
-            </p>
-
-            <p className="text-sm text-muted-foreground">
-              Esta é apenas uma simulação. Nenhuma cobrança real foi feita.
-            </p>
-          </div>
 
           <DialogFooter>
             <Button
               onClick={resetPurchase}
               className="w-full bg-red-600 hover:bg-red-700 text-white"
             >
-              Finalizar simulação
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <footer className="bg-black border-t border-border">
-        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} Toyota do Brasil — Todos os direitos
-          reservados
-        </div>
-      </footer>
     </div>
   );
 };
