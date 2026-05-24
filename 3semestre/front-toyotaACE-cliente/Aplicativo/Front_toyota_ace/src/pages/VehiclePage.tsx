@@ -207,7 +207,7 @@ const VehiclePage = () => {
                     <button
                       key={veiculo.id}
                       onClick={() => setSelectedVehicleId(veiculo.id || null)}
-                      className={`min-w-[320px] max-w-[320px] flex-shrink-0 snap-start text-left rounded-xl border overflow-hidden bg-white dark:bg-zinc-900 transition-all ${
+                      className={`min-w-[220px] max-w-[220px] flex-shrink-0 snap-start text-left rounded-xl border overflow-hidden bg-white dark:bg-zinc-900 transition-all ${
                         active
                           ? "border-red-600 ring-2 ring-red-600/20"
                           : "border-border hover:border-red-400"

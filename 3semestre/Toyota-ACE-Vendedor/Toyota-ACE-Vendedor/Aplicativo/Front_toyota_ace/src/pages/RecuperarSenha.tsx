@@ -1,80 +1,94 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import loginBg from "@/assets/login-bg.jpg";
+import logoT from "@/assets/logoT.png";
 
 const RecuperarSenha = () => {
   const [email, setEmail] = useState("");
+
   const navigate = useNavigate();
 
   const handleRecover = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email) {
-      toast.error("Informe o e-mail");
+      toast.error("Digite seu e-mail");
       return;
     }
 
-    toast.success("E-mail de recuperação enviado!");
+    toast.success("Link de recuperação enviado para seu e-mail!");
+
+    setTimeout(() => {
+      navigate("/");
+    }, 2000);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+    <div className="w-full min-h-screen bg-[url('https://mir-s3-cdn-cf.behance.net/project_modules/fs/c84ab249239255.56085275bc31a.png')] bg-center bg-cover flex items-center justify-center p-4 relative overflow-hidden">
       
+      {/* Theme Toggle */}
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
 
-      <img
-        src={loginBg}
-        className="absolute inset-0 w-full h-full object-cover blur-sm scale-105 brightness-[0.3]"
-      />
-
-      <div className="relative z-10 w-full max-w-sm mx-4 animate-reveal-up">
-        <div className="bg-card border border-border rounded-lg p-8 shadow-2xl shadow-black/40">
-          
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center p-1">
-              <img src="/toyota_logo.png" className="w-full h-full object-contain" />
-            </div>
-
-            <div>
-              <h1 className="text-lg font-semibold">Recuperar Senha</h1>
-              <p className="text-xs text-muted-foreground">
-                Receba um link no e-mail
-              </p>
-            </div>
+      {/* Card */}
+      <div className="w-full max-w-md animate-fade-in backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl shadow-2xl shadow-black/40 p-8">
+        
+        {/* Header */}
+        <div className="text-center space-y-2 mb-6">
+          <div className="mx-auto w-16 h-16 flex items-center justify-center mb-1">
+            <img
+              src={logoT}
+              alt="Toyota Logo"
+              className="w-24 h-24 object-contain"
+            />
           </div>
 
-          <form onSubmit={handleRecover} className="space-y-5">
-            
-            <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input
-                placeholder="vendedor@toyota.com.br"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+          <h1 className="text-2xl font-bold text-white">
+            Recuperar Senha
+          </h1>
 
-            <Button className="w-full">Enviar</Button>
-          </form>
-
-          <p className="text-xs text-muted-foreground text-center mt-4">
-            Lembrou a senha?{" "}
-            <span
-              onClick={() => navigate("/")}
-              className="text-primary cursor-pointer hover:underline"
-            >
-              Voltar para login
-            </span>
+          <p className="text-sm text-white/90">
+            Informe seu e-mail para receber o link de recuperação
           </p>
         </div>
+
+        {/* Form */}
+        <form onSubmit={handleRecover} className="space-y-4">
+          
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-white">
+              E-mail
+            </Label>
+
+            <Input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-black/80"
+            />
+          </div>
+
+          <Button type="submit" className="w-full">
+            Enviar link
+          </Button>
+
+          <p className="text-center text-white text-sm">
+            Lembrou sua senha?{" "}
+            <Link
+              to="/"
+              className="text-primary hover:underline font-medium"
+            >
+              Voltar para login
+            </Link>
+          </p>
+        </form>
       </div>
     </div>
   );

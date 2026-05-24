@@ -51,6 +51,14 @@ const FinancingPage = () => {
   const [pagando, setPagando] = useState(false);
   const [ultimoMesPago, setUltimoMesPago] = useState("Janeiro");
 
+  const [modalPagamentoAberto, setModalPagamentoAberto] = useState(false);
+  const [formaPagamento, setFormaPagamento] = useState("cartao");
+  const [nomeCartao, setNomeCartao] = useState("");
+  const [numeroCartao, setNumeroCartao] = useState("");
+  const [validade, setValidade] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [cpf, setCpf] = useState("");
+
   useEffect(() => {
     async function carregarFinanciamento() {
       if (!user?.id) {
@@ -170,6 +178,35 @@ const FinancingPage = () => {
     }
   };
 
+  const confirmarPagamento = async () => {
+    if (!formaPagamento) {
+      toast.error("Selecione uma forma de pagamento.");
+      return;
+    }
+
+    if (formaPagamento === "cartao") {
+      if (!nomeCartao || !numeroCartao || !validade || !cvv || !cpf) {
+        toast.error("Preencha todos os dados do cartão.");
+        return;
+      }
+    }
+
+    if (formaPagamento === "pix" && !cpf) {
+      toast.error("Informe o CPF para gerar o PIX.");
+      return;
+    }
+
+    await pagarParcela();
+
+    setModalPagamentoAberto(false);
+    setNomeCartao("");
+    setNumeroCartao("");
+    setValidade("");
+    setCvv("");
+    setCpf("");
+    setFormaPagamento("cartao");
+  };
+
   if (loading) {
     return <div className="p-8 text-gray-500">Carregando financiamento...</div>;
   }
@@ -238,7 +275,7 @@ const FinancingPage = () => {
                       <button
                         key={veiculo.id}
                         onClick={() => setSelectedVehicleId(veiculo.id || null)}
-                        className={`min-w-[320px] max-w-[320px] flex-shrink-0 snap-start text-left rounded-xl border overflow-hidden bg-white dark:bg-zinc-900 transition-all ${
+                        className={`min-w-[220px] max-w-[220px] flex-shrink-0 snap-start text-left rounded-xl border overflow-hidden bg-white dark:bg-zinc-900 transition-all ${
                           active
                             ? "border-red-600 ring-2 ring-red-600/20"
                             : "border-border hover:border-red-400"
@@ -277,7 +314,9 @@ const FinancingPage = () => {
                   icon={<DollarSign className="h-5 w-5 text-red-600" />}
                   title="Valor Total"
                   value={fmt(valorTotal)}
-                  subtitle={veiculoSelecionado?.modeloVeiculo || "Veículo Toyota"}
+                  subtitle={
+                    veiculoSelecionado?.modeloVeiculo || "Veículo Toyota"
+                  }
                 />
 
                 <FinanceCard
@@ -338,19 +377,18 @@ const FinancingPage = () => {
                     <p className="text-2xl font-bold">{fmt(valorParcela)}</p>
 
                     <p className="text-sm text-gray-500">
-                      Ao pagar, o saldo pendente será reduzido e o mês avançará.
+                      Escolha a forma de pagamento e confirme para dar baixa na
+                      parcela.
                     </p>
                   </div>
 
                   <Button
-                    onClick={pagarParcela}
+                    onClick={() => setModalPagamentoAberto(true)}
                     disabled={pagando || parcelasRestantes <= 0}
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     {parcelasRestantes <= 0
                       ? "Financiamento quitado"
-                      : pagando
-                      ? "Pagando..."
                       : "Pagar parcela"}
                   </Button>
                 </CardContent>
@@ -360,7 +398,112 @@ const FinancingPage = () => {
         </div>
       </main>
 
+      {modalPagamentoAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white dark:bg-zinc-900 border shadow-2xl p-6">
+            <h2 className="text-xl font-bold mb-2">Pagamento da parcela</h2>
 
+            <p className="text-sm text-gray-500 mb-4">
+              Valor da parcela:{" "}
+              <span className="font-semibold text-black dark:text-white">
+                {fmt(valorParcela)}
+              </span>
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">
+                  Forma de pagamento
+                </label>
+
+                <select
+                  value={formaPagamento}
+                  onChange={(e) => setFormaPagamento(e.target.value)}
+                  className="mt-1 w-full rounded-md border bg-background px-3 py-2"
+                >
+                  <option value="cartao">Cartão de crédito</option>
+                  <option value="pix">PIX</option>
+                  <option value="boleto">Boleto</option>
+                </select>
+              </div>
+
+              {formaPagamento === "cartao" && (
+                <>
+                  <input
+                    placeholder="Nome impresso no cartão"
+                    value={nomeCartao}
+                    onChange={(e) => setNomeCartao(e.target.value)}
+                    className="w-full rounded-md border bg-background px-3 py-2"
+                  />
+
+                  <input
+                    placeholder="Número do cartão"
+                    value={numeroCartao}
+                    onChange={(e) => setNumeroCartao(e.target.value)}
+                    className="w-full rounded-md border bg-background px-3 py-2"
+                  />
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      placeholder="Validade"
+                      value={validade}
+                      onChange={(e) => setValidade(e.target.value)}
+                      className="w-full rounded-md border bg-background px-3 py-2"
+                    />
+
+                    <input
+                      placeholder="CVV"
+                      value={cvv}
+                      onChange={(e) => setCvv(e.target.value)}
+                      className="w-full rounded-md border bg-background px-3 py-2"
+                    />
+                  </div>
+
+                  <input
+                    placeholder="CPF do titular"
+                    value={cpf}
+                    onChange={(e) => setCpf(e.target.value)}
+                    className="w-full rounded-md border bg-background px-3 py-2"
+                  />
+                </>
+              )}
+
+              {formaPagamento === "pix" && (
+                <input
+                  placeholder="CPF para gerar PIX"
+                  value={cpf}
+                  onChange={(e) => setCpf(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2"
+                />
+              )}
+
+              {formaPagamento === "boleto" && (
+                <p className="text-sm text-gray-500 bg-gray-100 dark:bg-zinc-800 p-3 rounded-md">
+                  O boleto será gerado após confirmar o pagamento.
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setModalPagamentoAberto(false)}
+                  disabled={pagando}
+                >
+                  Cancelar
+                </Button>
+
+                <Button
+                  onClick={confirmarPagamento}
+                  disabled={pagando}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {pagando ? "Processando..." : "Confirmar pagamento"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

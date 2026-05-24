@@ -1,138 +1,146 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { toast } from "sonner";
 import logoT from "@/assets/logoT.png";
 
-const RegisterPage = () => {
-  const [name, setName] = useState("");
+const Cadastro = () => {
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
 
-  const { login } = useAuth(); // pode usar depois pra auto login
   const navigate = useNavigate();
+  const { register } = useAppContext();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCadastro = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
-    if (!name || !email || !password || !confirmPassword) {
-      setError("Preencha todos os campos.");
+    if (!nome || !email || !senha || !confirmarSenha) {
+      toast.error("Preencha todos os campos");
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem.");
+    if (senha !== confirmarSenha) {
+      toast.error("As senhas não são iguais");
       return;
     }
 
-    // simulação de cadastro
-    const newUser = { name, email };
-    localStorage.setItem("user", JSON.stringify(newUser));
+    const success = register(nome, email, senha);
 
-    // auto login
-    login(email, password);
-
-    navigate("/");
+    if (success) {
+      toast.success("Cadastro realizado com sucesso!");
+      navigate("/");
+    } else {
+      toast.error("Não foi possível realizar o cadastro");
+    }
   };
 
   return (
-    <div className="w-full min-h-screen bg-[url('https://mir-s3-cdn-cf.behance.net/project_modules/fs/c84ab249239255.56085275bc31a.png')] bg-center bg-cover flex flex-col items-center justify-center p-4">
-      
-      <Card className="w-full max-w-md animate-fade-in backdrop-blur-xl bg-white/10">
-        
-        <CardHeader className="text-center space-y-2">
+    <div className="w-full min-h-screen bg-[url('https://mir-s3-cdn-cf.behance.net/project_modules/fs/c84ab249239255.56085275bc31a.png')] bg-center bg-cover flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-md animate-fade-in backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl shadow-2xl shadow-black/40 p-8">
+        <div className="text-center space-y-2 mb-6">
           <div className="mx-auto w-16 h-16 flex items-center justify-center mb-1">
-            <img src={logoT} alt="Toyota Logo" className="w-24 h-24 object-contain" />
+            <img
+              src={logoT}
+              alt="Toyota Logo"
+              className="w-24 h-24 object-contain"
+            />
           </div>
 
-          <CardTitle className="text-2xl font-bold text-white">
-            Criar Conta
-          </CardTitle>
+          <h1 className="text-2xl font-bold text-white">Criar Conta</h1>
 
-          <CardDescription className="text-white">
-            Cadastre-se para acompanhar seu veículo
-          </CardDescription>
-        </CardHeader>
+          <p className="text-sm text-white/90">
+            Cadastre-se no ACE Vendedor
+          </p>
+        </div>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleCadastro} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="nome" className="text-white">
+              Nome completo
+            </Label>
 
-            {/* NOME */}
-            <div className="space-y-2">
-              <Label className="text-white">Nome</Label>
-              <Input
-                placeholder="Seu nome"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
+            <Input
+              id="nome"
+              type="text"
+              placeholder="Seu nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="bg-white/90"
+            />
+          </div>
 
-            {/* EMAIL */}
-            <div className="space-y-2">
-              <Label className="text-white">Email</Label>
-              <Input
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-white">
+              E-mail
+            </Label>
 
-            {/* SENHA */}
-            <div className="space-y-2">
-              <Label className="text-white">Senha</Label>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            <Input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-white/90"
+            />
+          </div>
 
-            {/* CONFIRMAR SENHA */}
-            <div className="space-y-2">
-              <Label className="text-white">Confirmar Senha</Label>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="senha" className="text-white">
+              Senha
+            </Label>
 
-            {/* ERRO */}
-            {error && (
-              <p className="text-sm text-red-500 text-center">
-                {error}
-              </p>
-            )}
+            <Input
+              id="senha"
+              type="password"
+              placeholder="••••••••"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              className="bg-white/90"
+            />
+          </div>
 
-            {/* BOTÃO */}
-            <Button type="submit" className="w-full">
-              Criar conta
-            </Button>
+          <div className="space-y-2">
+            <Label htmlFor="confirmarSenha" className="text-white">
+              Confirmar senha
+            </Label>
 
-            {/* LOGIN */}
-            <p className="text-center text-white text-sm">
-              Já tem conta?{" "}
-              <Link to="/login" className="hover:underline font-medium">
-                Entrar
-              </Link>
-            </p>
+            <Input
+              id="confirmarSenha"
+              type="password"
+              placeholder="••••••••"
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              className="bg-white/90"
+            />
+          </div>
 
-          </form>
-        </CardContent>
-      </Card>
+          <Button type="submit" className="w-full">
+            Cadastrar
+          </Button>
 
-       
+          <p className="text-center text-white text-sm">
+            Já tem conta?{" "}
+            <Link
+              to="/"
+              className="text-primary hover:underline font-medium"
+            >
+              Entrar
+            </Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 };
 
-export default RegisterPage;
+export default Cadastro;
