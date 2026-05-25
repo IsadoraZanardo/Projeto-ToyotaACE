@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import loginBg from "@/assets/login-bg.jpg";
+import logoT from "@/assets/logoT.png";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const navigate = useNavigate();
   const { login } = useAppContext();
 
@@ -33,81 +34,82 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      
-      {/* Theme */}
+    <div className="w-full min-h-screen bg-[url('https://mir-s3-cdn-cf.behance.net/project_modules/fs/c84ab249239255.56085275bc31a.png')] bg-center bg-cover flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
 
-      {/* Background */}
-      <img
-        src={loginBg}
-        className="absolute inset-0 w-full h-full object-cover blur-sm scale-105 brightness-[0.3]"
-      />
-
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-sm mx-4 animate-reveal-up">
-        <div className="bg-card border border-border rounded-lg p-8 shadow-2xl shadow-black/40">
-          
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center p-1">
-              <img src="/toyota_logo.png" className="w-full h-full object-contain" />
-            </div>
-
-            <div>
-              <h1 className="text-lg font-semibold">ACE Vendedor</h1>
-              <p className="text-xs text-muted-foreground">
-                Toyota Sales System
-              </p>
-            </div>
+      <div className="w-full max-w-md animate-fade-in backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl shadow-2xl shadow-black/40 p-8">
+        <div className="text-center space-y-2 mb-6">
+          <div className="mx-auto w-16 h-16 flex items-center justify-center mb-1">
+            <img
+              src={logoT}
+              alt="Toyota Logo"
+              className="w-24 h-24 object-contain"
+            />
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            
-            <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+          <h1 className="text-2xl font-bold text-white">ACE Vendedor</h1>
 
-            <div className="space-y-2">
-              <Label>Senha</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-
-            <Button className="w-full">Entrar</Button>
-          </form>
-
-          {/* Links */}
-          <p className="text-xs text-muted-foreground text-center mt-4">
-            Esqueceu a senha?{" "}
-            <span
-              onClick={() => navigate("/recuperar")}
-              className="text-primary cursor-pointer hover:underline"
-            >
-              Clique aqui
-            </span>
-          </p>
-
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Não tem conta?{" "}
-            <span
-              onClick={() => navigate("/cadastro")}
-              className="text-primary cursor-pointer hover:underline"
-            >
-              Criar conta
-            </span>
+          <p className="text-sm text-white/90">
+            Toyota Sales System
           </p>
         </div>
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-white">
+              E-mail
+            </Label>
+
+            <Input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-black/80"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-white">
+              Senha
+            </Label>
+
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-black/80"
+            />
+          </div>
+
+          <Button type="submit" className="w-full">
+            Entrar
+          </Button>
+
+          <p className="text-center text-sm">
+            <Link
+              to="/recuperar"
+              className="text-white hover:underline text-xs"
+            >
+              Esqueceu a senha?
+            </Link>
+          </p>
+
+          <p className="text-center text-white text-sm">
+            Não tem conta?{" "}
+            <Link
+              to="/cadastro"
+              className="text-primary hover:underline font-medium"
+            >
+              Criar conta
+            </Link>
+          </p>
+        </form>
       </div>
     </div>
   );
