@@ -1,21 +1,27 @@
+import { useAuth } from "../../contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { usePurchases } from "../../contexts/PurchasesContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
-const toyotaLogo =
-  "https://www.toyota.com.br/media/brand/toyota-logo-2020.png";
+// Imagens locais dentro de app/image
+import kitRevisaoImg from "../image/Prot#U00f3tipos Toyota.jpg";
+import tapeteImg from "../image/carro toyota.jpg";
+import boneImg from "../image/logoT.png";
+import limpezaImg from "../image/download.png";
+import acessorioImg from "../image/sw4.png";
+import logoToyotaImg from "../image/Logo.png";
 
 const promotions = [
   {
@@ -23,21 +29,21 @@ const promotions = [
     title: "Kit Revisão Toyota",
     description: "Até 20% OFF em kits selecionados de manutenção.",
     price: "A partir de R$ 189,90",
-    image: toyotaLogo,
+    image: kitRevisaoImg,
   },
   {
     id: 2,
     title: "Acessórios Originais",
     description: "Tapetes, protetores e itens exclusivos Toyota.",
     price: "Promoções especiais",
-    image: toyotaLogo,
+    image: tapeteImg,
   },
   {
     id: 3,
     title: "Linha Lifestyle",
     description: "Bonés, camisetas, garrafas e produtos oficiais.",
     price: "Até 15% OFF",
-    image: toyotaLogo,
+    image: boneImg,
   },
 ];
 
@@ -48,7 +54,7 @@ const products = [
     category: "Acessórios",
     price: 249.9,
     oldPrice: 299.9,
-    image: toyotaLogo,
+    image: tapeteImg,
   },
   {
     id: 2,
@@ -56,7 +62,7 @@ const products = [
     category: "Cuidados",
     price: 89.9,
     oldPrice: 119.9,
-    image: toyotaLogo,
+    image: limpezaImg,
   },
   {
     id: 3,
@@ -64,15 +70,31 @@ const products = [
     category: "Lifestyle",
     price: 129.9,
     oldPrice: 159.9,
-    image: toyotaLogo,
+    image: boneImg,
   },
   {
     id: 4,
-    name: "Protetor de Porta",
+    name: "Protetor de Porta Toyota",
     category: "Acessórios",
     price: 79.9,
     oldPrice: 99.9,
-    image: toyotaLogo,
+    image: acessorioImg,
+  },
+  {
+    id: 5,
+    name: "Capa de Chave Toyota",
+    category: "Acessórios",
+    price: 59.9,
+    oldPrice: 79.9,
+    image: logoToyotaImg,
+  },
+  {
+    id: 6,
+    name: "Kit Emergência Veicular",
+    category: "Segurança",
+    price: 149.9,
+    oldPrice: 189.9,
+    image: acessorioImg,
   },
 ];
 
@@ -84,7 +106,7 @@ const paymentMethods = [
 ];
 
 function formatPrice(value) {
-  return value.toLocaleString("pt-BR", {
+  return Number(value || 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
@@ -93,7 +115,7 @@ function formatPrice(value) {
 export default function ShopPage() {
   const { theme } = useTheme();
   const { addPurchase } = usePurchases();
-
+  const { user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
@@ -168,7 +190,7 @@ export default function ShopPage() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   }
 
-  function finishPurchase() {
+  async function finishPurchase() {
     if (cart.length === 0) {
       Alert.alert("Carrinho vazio", "Adicione algum produto primeiro.");
       return;
@@ -179,10 +201,47 @@ export default function ShopPage() {
       return;
     }
 
-    addPurchase(cart, paymentMethod, total);
+    try {
+      const clienteId = user?.id;
 
-    setCartOpen(false);
-    setSuccessOpen(true);
+      if (!clienteId) {
+        Alert.alert("Erro", "Cliente não identificado. Faça login novamente.");
+        return;
+      }
+
+      for (const item of cart) {
+        const response = await fetch("http://localhost:8083/api/compras", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clienteId: clienteId,
+            produto: item.name,
+            quantidade: item.quantity,
+            preco: item.price,
+            total: item.price * item.quantity,
+            metodoPagamento: paymentMethod,
+            statusPedido: "REALIZADO",
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Erro ao registrar compra no backend.");
+        }
+      }
+
+      addPurchase(cart, paymentMethod, total);
+
+      setCartOpen(false);
+      setSuccessOpen(true);
+    } catch (error) {
+      console.log("Erro ao finalizar compra:", error);
+      Alert.alert(
+        "Erro na compra",
+        "Não foi possível registrar a compra. Tente novamente."
+      );
+    }
   }
 
   function resetPurchase() {
@@ -197,7 +256,7 @@ export default function ShopPage() {
       contentContainerStyle={styles.content}
     >
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: theme.text }]}>
             Toyota Shop
           </Text>
@@ -213,40 +272,32 @@ export default function ShopPage() {
         >
           <Ionicons name="cart-outline" size={22} color="#fff" />
 
-          {totalItems > 0 && (
+          {totalItems > 0 ? (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{totalItems}</Text>
             </View>
-          )}
+          ) : null}
         </TouchableOpacity>
       </View>
 
       <View style={styles.banner}>
         <View style={styles.promoBadge}>
-          <Ionicons name="pricetag-outline" size={14} color="#fff" />
+          <Ionicons name="pricetag-outline" size={13} color="#fff" />
           <Text style={styles.promoBadgeText}>Promoção Especial</Text>
         </View>
 
         <Text style={styles.bannerTitle}>{promotion.title}</Text>
 
-        <Text style={styles.bannerDescription}>
-          {promotion.description}
-        </Text>
+        <Text style={styles.bannerDescription}>{promotion.description}</Text>
 
         <Text style={styles.bannerPrice}>{promotion.price}</Text>
 
         <View style={styles.bannerImageBox}>
-          <Image
-            source={{ uri: promotion.image }}
-            style={styles.bannerImage}
-          />
+          <Image source={promotion.image} style={styles.bannerImage} />
         </View>
 
         <View style={styles.controls}>
-          <TouchableOpacity
-            style={styles.arrowButton}
-            onPress={prevSlide}
-          >
+          <TouchableOpacity style={styles.arrowButton} onPress={prevSlide}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </TouchableOpacity>
 
@@ -263,10 +314,7 @@ export default function ShopPage() {
             ))}
           </View>
 
-          <TouchableOpacity
-            style={styles.arrowButton}
-            onPress={nextSlide}
-          >
+          <TouchableOpacity style={styles.arrowButton} onPress={nextSlide}>
             <Ionicons name="chevron-forward" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -280,14 +328,11 @@ export default function ShopPage() {
         Escolha produtos originais e acessórios Toyota.
       </Text>
 
-      <View style={styles.products}>
+      <View style={styles.productsGrid}>
         {products.map((product) => (
           <View
             key={product.id}
-            style={[
-              styles.productCard,
-              { backgroundColor: theme.card },
-            ]}
+            style={[styles.productCard, { backgroundColor: theme.card }]}
           >
             <View
               style={[
@@ -295,26 +340,26 @@ export default function ShopPage() {
                 { backgroundColor: theme.box },
               ]}
             >
-              <Image
-                source={{ uri: product.image }}
-                style={styles.productImage}
-              />
+              <Image source={product.image} style={styles.productImage} />
             </View>
 
             <Text style={[styles.category, { color: theme.primary }]}>
               {product.category}
             </Text>
 
-            <Text style={[styles.productName, { color: theme.text }]}>
+            <Text
+              style={[styles.productName, { color: theme.text }]}
+              numberOfLines={2}
+            >
               {product.name}
             </Text>
 
             <View style={styles.stars}>
-              <Ionicons name="star" size={15} color="#facc15" />
-              <Ionicons name="star" size={15} color="#facc15" />
-              <Ionicons name="star" size={15} color="#facc15" />
-              <Ionicons name="star" size={15} color="#facc15" />
-              <Ionicons name="star-outline" size={15} color="#facc15" />
+              <Ionicons name="star" size={12} color="#facc15" />
+              <Ionicons name="star" size={12} color="#facc15" />
+              <Ionicons name="star" size={12} color="#facc15" />
+              <Ionicons name="star" size={12} color="#facc15" />
+              <Ionicons name="star-outline" size={12} color="#facc15" />
             </View>
 
             <Text style={[styles.price, { color: theme.text }]}>
@@ -326,21 +371,11 @@ export default function ShopPage() {
             </Text>
 
             <TouchableOpacity
-              style={[
-                styles.addButton,
-                { backgroundColor: theme.primary },
-              ]}
+              style={[styles.addButton, { backgroundColor: theme.primary }]}
               onPress={() => addToCart(product)}
             >
-              <Ionicons
-                name="cart-outline"
-                size={18}
-                color="#fff"
-              />
-
-              <Text style={styles.addButtonText}>
-                Adicionar
-              </Text>
+              <Ionicons name="cart-outline" size={14} color="#fff" />
+              <Text style={styles.addButtonText}>Add</Text>
             </TouchableOpacity>
           </View>
         ))}
@@ -352,48 +387,25 @@ export default function ShopPage() {
 
       <Modal visible={cartOpen} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modal,
-              { backgroundColor: theme.card },
-            ]}
-          >
+          <View style={[styles.modal, { backgroundColor: theme.card }]}>
             <View style={styles.modalHeader}>
               <View>
-                <Text
-                  style={[styles.modalTitle, { color: theme.text }]}
-                >
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
                   Carrinho
                 </Text>
 
-                <Text
-                  style={[
-                    styles.modalSubtitle,
-                    { color: theme.subtext },
-                  ]}
-                >
-                  Simule sua compra Toyota.
+                <Text style={[styles.modalSubtitle, { color: theme.subtext }]}>
+                  Revise seus produtos antes de finalizar.
                 </Text>
               </View>
 
-              <TouchableOpacity
-                onPress={() => setCartOpen(false)}
-              >
-                <Ionicons
-                  name="close"
-                  size={26}
-                  color={theme.text}
-                />
+              <TouchableOpacity onPress={() => setCartOpen(false)}>
+                <Ionicons name="close" size={26} color={theme.text} />
               </TouchableOpacity>
             </View>
 
             {cart.length === 0 ? (
-              <Text
-                style={[
-                  styles.emptyText,
-                  { color: theme.subtext },
-                ]}
-              >
+              <Text style={[styles.emptyText, { color: theme.subtext }]}>
                 Seu carrinho está vazio.
               </Text>
             ) : (
@@ -401,41 +413,22 @@ export default function ShopPage() {
                 {cart.map((item) => (
                   <View
                     key={item.id}
-                    style={[
-                      styles.cartItem,
-                      { backgroundColor: theme.box },
-                    ]}
+                    style={[styles.cartItem, { backgroundColor: theme.box }]}
                   >
-                    <Image
-                      source={{ uri: item.image }}
-                      style={styles.cartImage}
-                    />
+                    <Image source={item.image} style={styles.cartImage} />
 
                     <View style={styles.cartInfo}>
-                      <Text
-                        style={[
-                          styles.cartName,
-                          { color: theme.text },
-                        ]}
-                      >
+                      <Text style={[styles.cartName, { color: theme.text }]}>
                         {item.name}
                       </Text>
 
                       <Text
-                        style={[
-                          styles.cartCategory,
-                          { color: theme.subtext },
-                        ]}
+                        style={[styles.cartCategory, { color: theme.subtext }]}
                       >
                         {item.category}
                       </Text>
 
-                      <Text
-                        style={[
-                          styles.cartPrice,
-                          { color: theme.text },
-                        ]}
-                      >
+                      <Text style={[styles.cartPrice, { color: theme.text }]}>
                         {formatPrice(item.price)}
                       </Text>
                     </View>
@@ -443,44 +436,23 @@ export default function ShopPage() {
                     <View style={styles.quantityBox}>
                       <TouchableOpacity
                         style={styles.quantityButton}
-                        onPress={() =>
-                          decreaseQuantity(item.id)
-                        }
+                        onPress={() => decreaseQuantity(item.id)}
                       >
-                        <Ionicons
-                          name="remove"
-                          size={16}
-                          color={theme.text}
-                        />
+                        <Ionicons name="remove" size={16} color={theme.text} />
                       </TouchableOpacity>
 
-                      <Text
-                        style={[
-                          styles.quantityText,
-                          { color: theme.text },
-                        ]}
-                      >
+                      <Text style={[styles.quantityText, { color: theme.text }]}>
                         {item.quantity}
                       </Text>
 
                       <TouchableOpacity
                         style={styles.quantityButton}
-                        onPress={() =>
-                          increaseQuantity(item.id)
-                        }
+                        onPress={() => increaseQuantity(item.id)}
                       >
-                        <Ionicons
-                          name="add"
-                          size={16}
-                          color={theme.text}
-                        />
+                        <Ionicons name="add" size={16} color={theme.text} />
                       </TouchableOpacity>
 
-                      <TouchableOpacity
-                        onPress={() =>
-                          removeFromCart(item.id)
-                        }
-                      >
+                      <TouchableOpacity onPress={() => removeFromCart(item.id)}>
                         <Ionicons
                           name="trash-outline"
                           size={20}
@@ -493,39 +465,19 @@ export default function ShopPage() {
               </ScrollView>
             )}
 
-            <View
-              style={[
-                styles.summaryBox,
-                { backgroundColor: theme.box },
-              ]}
-            >
+            <View style={[styles.summaryBox, { backgroundColor: theme.box }]}>
               <View style={styles.summaryRow}>
-                <Text
-                  style={[
-                    styles.summaryText,
-                    { color: theme.subtext },
-                  ]}
-                >
+                <Text style={[styles.summaryText, { color: theme.subtext }]}>
                   Subtotal
                 </Text>
 
-                <Text
-                  style={[
-                    styles.summaryText,
-                    { color: theme.text },
-                  ]}
-                >
+                <Text style={[styles.summaryText, { color: theme.text }]}>
                   {formatPrice(subtotal)}
                 </Text>
               </View>
 
               <View style={styles.summaryRow}>
-                <Text
-                  style={[
-                    styles.summaryText,
-                    { color: theme.subtext },
-                  ]}
-                >
+                <Text style={[styles.summaryText, { color: theme.subtext }]}>
                   Desconto
                 </Text>
 
@@ -537,39 +489,23 @@ export default function ShopPage() {
               <View style={styles.divider} />
 
               <View style={styles.summaryRow}>
-                <Text
-                  style={[
-                    styles.totalText,
-                    { color: theme.text },
-                  ]}
-                >
+                <Text style={[styles.totalText, { color: theme.text }]}>
                   Total
                 </Text>
 
-                <Text
-                  style={[
-                    styles.totalText,
-                    { color: theme.text },
-                  ]}
-                >
+                <Text style={[styles.totalText, { color: theme.text }]}>
                   {formatPrice(total)}
                 </Text>
               </View>
             </View>
 
-            <Text
-              style={[
-                styles.paymentTitle,
-                { color: theme.text },
-              ]}
-            >
+            <Text style={[styles.paymentTitle, { color: theme.text }]}>
               Forma de pagamento
             </Text>
 
             <View style={styles.paymentGrid}>
               {paymentMethods.map((method) => {
-                const selected =
-                  paymentMethod === method.id;
+                const selected = paymentMethod === method.id;
 
                 return (
                   <TouchableOpacity
@@ -577,13 +513,9 @@ export default function ShopPage() {
                     style={[
                       styles.paymentOption,
                       { backgroundColor: theme.box },
-                      selected && {
-                        backgroundColor: theme.primary,
-                      },
+                      selected && { backgroundColor: theme.primary },
                     ]}
-                    onPress={() =>
-                      setPaymentMethod(method.id)
-                    }
+                    onPress={() => setPaymentMethod(method.id)}
                   >
                     <Ionicons
                       name={method.icon}
@@ -594,9 +526,7 @@ export default function ShopPage() {
                     <Text
                       style={[
                         styles.paymentText,
-                        { color: theme.text },
-                        selected &&
-                          styles.paymentTextSelected,
+                        { color: selected ? "#fff" : theme.text },
                       ]}
                     >
                       {method.label}
@@ -615,9 +545,7 @@ export default function ShopPage() {
               onPress={finishPurchase}
               disabled={cart.length === 0}
             >
-              <Text style={styles.finishButtonText}>
-                Finalizar compra
-              </Text>
+              <Text style={styles.finishButtonText}>Finalizar compra</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -625,71 +553,32 @@ export default function ShopPage() {
 
       <Modal visible={successOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.successModal,
-              { backgroundColor: theme.card },
-            ]}
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={72}
-              color="#22c55e"
-            />
+          <View style={[styles.successModal, { backgroundColor: theme.card }]}>
+            <Ionicons name="checkmark-circle" size={72} color="#22c55e" />
 
-            <Text
-              style={[
-                styles.successTitle,
-                { color: theme.text },
-              ]}
-            >
+            <Text style={[styles.successTitle, { color: theme.text }]}>
               Compra simulada com sucesso!
             </Text>
 
-            <Text
-              style={[
-                styles.successText,
-                { color: theme.subtext },
-              ]}
-            >
+            <Text style={[styles.successText, { color: theme.subtext }]}>
               Seu pedido Toyota foi registrado.
             </Text>
 
-            <View
-              style={[
-                styles.summaryBox,
-                { backgroundColor: theme.box },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.summaryText,
-                  { color: theme.text },
-                ]}
-              >
+            <View style={[styles.summaryBox, { backgroundColor: theme.box }]}>
+              <Text style={[styles.summaryText, { color: theme.text }]}>
                 Total: {formatPrice(total)}
               </Text>
 
-              <Text
-                style={[
-                  styles.summaryText,
-                  { color: theme.text },
-                ]}
-              >
+              <Text style={[styles.summaryText, { color: theme.text }]}>
                 Pagamento: {selectedPayment?.label}
               </Text>
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.finishButton,
-                { backgroundColor: theme.primary },
-              ]}
+              style={[styles.finishButton, { backgroundColor: theme.primary }]}
               onPress={resetPurchase}
             >
-              <Text style={styles.finishButtonText}>
-                Finalizar
-              </Text>
+              <Text style={styles.finishButtonText}>Finalizar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -699,35 +588,38 @@ export default function ShopPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
 
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 18,
+    paddingBottom: 110,
   },
 
   header: {
     flexDirection: "row",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 18,
   },
 
   title: {
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: "bold",
   },
 
   subtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    maxWidth: 250,
+    marginTop: 5,
+    fontSize: 13,
+    lineHeight: 18,
   },
 
   cartButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -755,64 +647,65 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: "#dc2626",
-    padding: 18,
-    marginBottom: 26,
+    padding: 16,
+    marginBottom: 24,
   },
 
   promoBadge: {
     backgroundColor: "#dc2626",
     alignSelf: "flex-start",
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 12,
   },
 
   promoBadgeText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "bold",
     marginLeft: 6,
   },
 
   bannerTitle: {
     color: "#fff",
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   bannerDescription: {
     color: "#d4d4d8",
-    fontSize: 14,
-    marginBottom: 12,
+    fontSize: 13,
+    marginBottom: 10,
   },
 
   bannerPrice: {
     color: "#ef4444",
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 18,
+    marginBottom: 14,
   },
 
   bannerImageBox: {
     backgroundColor: "#fff",
     borderRadius: 18,
-    padding: 24,
+    padding: 14,
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 125,
   },
 
   bannerImage: {
-    width: 160,
-    height: 90,
+    width: "100%",
+    height: 110,
     resizeMode: "contain",
   },
 
   controls: {
-    marginTop: 18,
+    marginTop: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -820,8 +713,8 @@ const styles = StyleSheet.create({
 
   arrowButton: {
     backgroundColor: "rgba(255,255,255,0.12)",
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 999,
     justifyContent: "center",
     alignItems: "center",
@@ -840,7 +733,7 @@ const styles = StyleSheet.create({
   },
 
   dotActive: {
-    width: 28,
+    width: 26,
     backgroundColor: "#dc2626",
   },
 
@@ -855,61 +748,69 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  products: {
-    gap: 14,
+  productsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 14,
   },
 
   productCard: {
+    width: "48%",
     borderRadius: 18,
-    padding: 16,
-    elevation: 3,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.16)",
   },
 
   productImageBox: {
-    height: 120,
-    borderRadius: 16,
+    height: 105,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    marginBottom: 10,
+    overflow: "hidden",
   },
 
   productImage: {
-    width: 130,
-    height: 80,
+    width: "100%",
+    height: 85,
     resizeMode: "contain",
   },
 
   category: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: 3,
   },
 
   productName: {
-    fontSize: 17,
+    fontSize: 13,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 6,
+    minHeight: 34,
   },
 
   stars: {
     flexDirection: "row",
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   price: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "bold",
   },
 
   oldPrice: {
-    fontSize: 13,
+    fontSize: 11,
     textDecorationLine: "line-through",
-    marginBottom: 14,
+    marginBottom: 10,
   },
 
   addButton: {
-    padding: 13,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -918,7 +819,8 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: "#fff",
     fontWeight: "bold",
-    marginLeft: 8,
+    marginLeft: 6,
+    fontSize: 12,
   },
 
   footer: {
@@ -1078,10 +980,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     marginLeft: 6,
-  },
-
-  paymentTextSelected: {
-    color: "#fff",
   },
 
   finishButton: {

@@ -7,22 +7,21 @@ import paho.mqtt.client as mqtt
 # CONFIGURAÇÕES
 # -----------------------------
 
-BROKER = "mqtt"
+BROKER = "host.docker.internal"
 PORT = 1883
-TOPIC = "toyota/sensor/dados"
-
-QTD_CARROS = 10
+TOPIC = "toyota/veiculo/status"
+QTD_CARROS = 1
 
 ETAPAS = [
-    "PEDIDO REALIZADO",
-    "PRODUCAO",
-    "INSPECAO",
-    "CEGONHA",
-    "CONCESSIONARIA",
-    "PRONTO PARA RETIRADA"
-    ]
+    "Pedido Realizado",
+    "Linha de Produção",
+    "Inspeção",
+    "Cegonha",
+    "Concessionária",
+    "Pronto para Retirada"
+]
 
-TEMPOS_ETAPA = [2, 5, 6, 7, 4, 3]
+TEMPOS_ETAPA = [5, 5, 5, 5, 5, 5]
 
 TEMPO_ENTRE_ETAPA1_E_2 = 2
 
@@ -51,7 +50,7 @@ def timestamp():
 
 
 def gerar_chassi(n):
-    return f"CHASSI_{str(n).zfill(5)}"
+    return "9BR91AE59432B374D"
 
 
 def publicar(chassi, etapa, status):

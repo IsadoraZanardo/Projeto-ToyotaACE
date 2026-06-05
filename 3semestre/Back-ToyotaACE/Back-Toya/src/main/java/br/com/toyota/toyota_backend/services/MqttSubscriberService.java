@@ -9,7 +9,7 @@ import org.eclipse.paho.client.mqttv3.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-@Service
+//@Service
 public class MqttSubscriberService {
 
     @Value("${mqtt.broker}")

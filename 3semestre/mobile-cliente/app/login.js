@@ -6,54 +6,60 @@ import {
   TouchableOpacity,
   Image,
   ImageBackground,
-  StyleSheet
+  StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../contexts/AuthContext";
 
-// ❗ IMPORT CORRIGIDO (sem @)
 import logoT from "../assets/logoT.png";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  // 🔥 Redirecionamento automático seguro
   useEffect(() => {
     if (isAuthenticated) {
       router.replace("/(tabs)/dashboard");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
 
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       setError("Preencha todos os campos.");
       return;
     }
 
-    login(email, password);
+    try {
+      setLoading(true);
 
-    // 🔥 IMPORTANTE: usa rota com (tabs)
-    router.replace("/(tabs)/dashboard");
+      await login(email.trim(), password);
+
+      router.replace("/(tabs)/dashboard");
+    } catch (err) {
+      setError("E-mail ou senha incorretos.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <ImageBackground
       source={{
-        uri: "https://mir-s3-cdn-cf.behance.net/project_modules/fs/c84ab249239255.56085275bc31a.png"
+        uri: "https://mir-s3-cdn-cf.behance.net/project_modules/fs/c84ab249239255.56085275bc31a.png",
       }}
       style={styles.background}
       resizeMode="cover"
     >
       <View style={styles.container}>
         <View style={styles.card}>
-          
           <Image source={logoT} style={styles.logo} />
 
           <Text style={styles.title}>TOYOTA ACE</Text>
@@ -67,6 +73,8 @@ export default function LoginPage() {
             value={email}
             onChangeText={setEmail}
             style={styles.input}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
 
           <TextInput
@@ -80,8 +88,16 @@ export default function LoginPage() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <Text style={styles.buttonText}>Entrar</Text>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Entrar</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.push("/forgot-password")}>
@@ -94,7 +110,6 @@ export default function LoginPage() {
               <Text style={styles.registerBold}>Cadastre-se</Text>
             </Text>
           </TouchableOpacity>
-
         </View>
       </View>
     </ImageBackground>
@@ -108,15 +123,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 16
+    padding: 16,
   },
 
   card: {
     width: "100%",
     maxWidth: 400,
-    backgroundColor: "rgba(0,0,0,0.4)", // 🔥 melhor contraste no mobile
+    backgroundColor: "rgba(0,0,0,0.4)",
     borderRadius: 16,
-    padding: 20
+    padding: 20,
   },
 
   logo: {
@@ -124,20 +139,20 @@ const styles = StyleSheet.create({
     height: 80,
     alignSelf: "center",
     marginBottom: 10,
-    resizeMode: "contain"
+    resizeMode: "contain",
   },
 
   title: {
     color: "#fff",
     fontSize: 22,
     fontWeight: "bold",
-    textAlign: "center"
+    textAlign: "center",
   },
 
   subtitle: {
     color: "#ddd",
     textAlign: "center",
-    marginBottom: 20
+    marginBottom: 20,
   },
 
   input: {
@@ -145,7 +160,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     color: "#fff",
-    marginBottom: 12
+    marginBottom: 12,
   },
 
   button: {
@@ -153,35 +168,39 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 10
+    marginTop: 10,
+  },
+
+  buttonDisabled: {
+    opacity: 0.7,
   },
 
   buttonText: {
     color: "#fff",
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
 
   link: {
     color: "#fff",
     textAlign: "center",
     marginTop: 10,
-    fontSize: 12
+    fontSize: 12,
   },
 
   register: {
     color: "#fff",
     textAlign: "center",
-    marginTop: 10
+    marginTop: 10,
   },
 
   registerBold: {
     fontWeight: "bold",
-    color: "#f43f5e"
+    color: "#f43f5e",
   },
 
   error: {
     color: "#ff4d4d",
     marginBottom: 10,
-    textAlign: "center"
-  }
+    textAlign: "center",
+  },
 });

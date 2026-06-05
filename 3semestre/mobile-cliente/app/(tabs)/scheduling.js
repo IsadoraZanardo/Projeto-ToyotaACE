@@ -1,49 +1,121 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+
+import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
-const timeSlots = ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
+const API_URL = "http://localhost:8083/api";
 
-const dates = [
-  "01/05/2026",
-  "02/05/2026",
-  "03/05/2026",
-  "04/05/2026",
-  "05/05/2026",
-];
+const timeSlots = ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
 
 const serviceTypes = [
   {
     id: "retirada",
     label: "Retirada",
     icon: "checkmark-circle-outline",
+    description: "Agendamento de Retirada realizado pelo app Toyota ACE",
   },
   {
     id: "revisao",
     label: "Revisão",
     icon: "car-sport-outline",
+    description: "Agendamento de Revisão realizado pelo app Toyota ACE",
   },
   {
     id: "recall",
     label: "Recall",
     icon: "warning-outline",
+    description: "Agendamento de Recall realizado pelo app Toyota ACE",
   },
   {
     id: "outros",
     label: "Outros",
     icon: "location-outline",
+    description: "Agendamento realizado pelo app Toyota ACE",
   },
 ];
 
+function getUserId(user) {
+  return user?.id || user?.clienteId || user?.usuario?.id || null;
+}
+
+function getUserEmail(user) {
+  return user?.email || user?.emailCliente || user?.usuario?.email || "";
+}
+
+function getUserName(user) {
+  return user?.nome || user?.name || user?.nomeCliente || user?.email || "Cliente";
+}
+
+function formatDateToBackend(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateToDisplay(date) {
+  return date.toLocaleDateString("pt-BR");
+}
+
+function createNextDates(days = 5) {
+  const result = [];
+
+  for (let index = 0; index < days; index += 1) {
+    const date = new Date();
+    date.setDate(date.getDate() + index);
+
+    result.push({
+      label: formatDateToDisplay(date),
+      value: formatDateToBackend(date),
+    });
+  }
+
+  return result;
+}
+
+function mapTipoServico(tipoServico) {
+  const tipo = String(tipoServico || "").toLowerCase();
+
+  if (tipo.includes("revis")) return "revisao";
+  if (tipo.includes("retirada")) return "retirada";
+  if (tipo.includes("recall")) return "recall";
+
+  return "outros";
+}
+
+function normalizeAppointment(item, user) {
+  const type = mapTipoServico(item.tipoServico || item.tipo || item.servico);
+  const service = serviceTypes.find((serviceItem) => serviceItem.id === type);
+
+  return {
+    id: item.id,
+    date: item.data || item.date,
+    time: item.horario ? String(item.horario).substring(0, 5) : item.time || "",
+    type,
+    label: service?.label || item.tipoServico || "Outros",
+    icon: service?.icon || "calendar-outline",
+    description:
+      item.observacao ||
+      item.descricao ||
+      `Agendamento de ${service?.label || "atendimento"} realizado pelo app Toyota ACE`,
+    client: item.cliente?.nome || getUserName(user),
+  };
+}
+
 export default function SchedulingPage() {
+  const { user } = useAuth();
   const { theme } = useTheme();
 
   const [selectedDate, setSelectedDate] = useState(null);
@@ -51,42 +123,121 @@ export default function SchedulingPage() {
   const [serviceType, setServiceType] = useState("retirada");
   const [appointments, setAppointments] = useState([]);
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const clienteId = getUserId(user);
+  const email = getUserEmail(user);
+
+  const dates = useMemo(() => createNextDates(5), []);
+
   const selectedService = serviceTypes.find((item) => item.id === serviceType);
 
-  const appointmentsByDate = appointments.filter(
-    (item) => item.date === selectedDate
-  );
+  const appointmentsByDate = appointments
+    .filter((item) => item.date === selectedDate)
+    .sort((a, b) => a.time.localeCompare(b.time));
 
-  const handleConfirm = () => {
-    if (!selectedDate || !time) {
-      Alert.alert("Atenção", "Escolha uma data e um horário.");
-      return;
+  const carregarAgendamentos = useCallback(async () => {
+    try {
+      setErrorMessage("");
+
+      if (!clienteId) {
+        setAppointments([]);
+        setErrorMessage("Cliente não identificado. Faça login novamente.");
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/agendamentos/cliente/${clienteId}`);
+
+      if (!response.ok) {
+        throw new Error("Não foi possível carregar os agendamentos.");
+      }
+
+      const data = await response.json();
+
+      const formattedAppointments = Array.isArray(data)
+        ? data.map((item) => normalizeAppointment(item, user))
+        : [];
+
+      setAppointments(formattedAppointments);
+    } catch (error) {
+      console.log("Erro ao carregar agendamentos:", error);
+      setErrorMessage("Não foi possível carregar seus agendamentos.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  }, [clienteId, user]);
 
-    const alreadyExists = appointments.some(
-      (item) => item.date === selectedDate && item.time === time
-    );
+  useEffect(() => {
+    carregarAgendamentos();
+  }, [carregarAgendamentos]);
 
-    if (alreadyExists) {
-      Alert.alert("Horário ocupado", "Esse horário já foi agendado.");
-      return;
+  const onRefresh = () => {
+    setRefreshing(true);
+    carregarAgendamentos();
+  };
+
+  const handleConfirm = async () => {
+    try {
+      setErrorMessage("");
+
+      if (!clienteId) {
+        setErrorMessage("Cliente não identificado. Faça login novamente.");
+        return;
+      }
+
+      if (!selectedDate || !time) {
+        setErrorMessage("Escolha uma data e um horário.");
+        return;
+      }
+
+      const alreadyExists = appointments.some(
+        (item) => item.date === selectedDate && item.time === time
+      );
+
+      if (alreadyExists) {
+        setErrorMessage("Esse horário já foi agendado para esta data.");
+        return;
+      }
+
+      setSaving(true);
+
+      const response = await fetch(`${API_URL}/agendamentos`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clienteId,
+          email,
+          data: selectedDate,
+          horario: `${time}:00`,
+          tipoServico: selectedService?.label || "Outros",
+          observacao:
+            selectedService?.description ||
+            "Agendamento realizado pelo app Toyota ACE",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Não foi possível confirmar o agendamento.");
+      }
+
+      await carregarAgendamentos();
+
+      setTime("");
+      setErrorMessage("");
+
+      Alert.alert("Sucesso", "Agendamento confirmado!");
+    } catch (error) {
+      console.log("Erro ao confirmar agendamento:", error);
+      setErrorMessage("Não foi possível confirmar o agendamento.");
+    } finally {
+      setSaving(false);
     }
-
-    const newAppointment = {
-      id: Date.now(),
-      date: selectedDate,
-      time,
-      type: serviceType,
-      label: selectedService.label,
-      icon: selectedService.icon,
-      description: `Agendamento de ${selectedService.label} realizado pelo app Toyota ACE`,
-    };
-
-    setAppointments((prev) => [...prev, newAppointment]);
-
-    Alert.alert("Sucesso", "Agendamento confirmado!");
-
-    setTime("");
   };
 
   const handleDelete = (id) => {
@@ -98,26 +249,63 @@ export default function SchedulingPage() {
       {
         text: "Excluir",
         style: "destructive",
-        onPress: () => {
-          setAppointments((prev) => prev.filter((item) => item.id !== id));
+        onPress: async () => {
+          try {
+            const response = await fetch(`${API_URL}/agendamentos/${id}`, {
+              method: "DELETE",
+            });
+
+            if (!response.ok) {
+              throw new Error("Não foi possível excluir o agendamento.");
+            }
+
+            await carregarAgendamentos();
+
+            Alert.alert("Sucesso", "Agendamento removido!");
+          } catch (error) {
+            console.log("Erro ao excluir agendamento:", error);
+            setErrorMessage("Não foi possível excluir o agendamento.");
+          }
         },
       },
     ]);
   };
 
+  if (loading) {
+    return (
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.primary} />
+
+        <Text style={[styles.loadingText, { color: theme.subtext }]}>
+          Carregando agenda...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.scrollContent}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={theme.primary}
+        />
+      }
     >
       <View style={styles.header}>
-        <View>
-          <Text style={[styles.title, { color: theme.text }]}>Agenda</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Agenda</Text>
 
-          <Text style={[styles.subtitle, { color: theme.subtext }]}>
-            Escolha a data e horário para seu atendimento.
-          </Text>
-        </View>
+        <Text style={[styles.subtitle, { color: theme.subtext }]}>
+          Escolha a data e horário para seu atendimento.
+        </Text>
       </View>
 
       <View style={[styles.card, { backgroundColor: theme.card }]}>
@@ -139,7 +327,10 @@ export default function SchedulingPage() {
                   { backgroundColor: theme.box },
                   selected && { backgroundColor: theme.primary },
                 ]}
-                onPress={() => setServiceType(item.id)}
+                onPress={() => {
+                  setServiceType(item.id);
+                  setErrorMessage("");
+                }}
               >
                 <Ionicons
                   name={item.icon}
@@ -165,18 +356,24 @@ export default function SchedulingPage() {
 
         <View style={styles.rowWrap}>
           {dates.map((date) => {
-            const selected = selectedDate === date;
-            const hasAppointment = appointments.some((item) => item.date === date);
+            const selected = selectedDate === date.value;
+            const hasAppointment = appointments.some(
+              (item) => item.date === date.value
+            );
 
             return (
               <TouchableOpacity
-                key={date}
+                key={date.value}
                 style={[
                   styles.dateOption,
                   { backgroundColor: theme.box },
                   selected && { backgroundColor: theme.primary },
                 ]}
-                onPress={() => setSelectedDate(date)}
+                onPress={() => {
+                  setSelectedDate(date.value);
+                  setTime("");
+                  setErrorMessage("");
+                }}
               >
                 <Text
                   style={[
@@ -185,7 +382,7 @@ export default function SchedulingPage() {
                     selected && styles.optionTextSelected,
                   ]}
                 >
-                  {date}
+                  {date.label}
                 </Text>
 
                 {hasAppointment && <View style={styles.dot} />}
@@ -206,14 +403,18 @@ export default function SchedulingPage() {
             return (
               <TouchableOpacity
                 key={slot}
-                disabled={unavailable}
+                disabled={!selectedDate || unavailable}
                 style={[
                   styles.timeOption,
                   { backgroundColor: theme.box },
                   selected && { backgroundColor: theme.primary },
                   unavailable && styles.unavailableOption,
+                  !selectedDate && styles.disabledOption,
                 ]}
-                onPress={() => setTime(slot)}
+                onPress={() => {
+                  setTime(slot);
+                  setErrorMessage("");
+                }}
               >
                 <Text
                   style={[
@@ -221,6 +422,7 @@ export default function SchedulingPage() {
                     { color: theme.text },
                     selected && styles.optionTextSelected,
                     unavailable && styles.unavailableText,
+                    !selectedDate && styles.unavailableText,
                   ]}
                 >
                   {slot}
@@ -230,17 +432,31 @@ export default function SchedulingPage() {
           })}
         </View>
 
+        {errorMessage ? (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle-outline" size={18} color="#ef4444" />
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
+
         <TouchableOpacity
           style={[
             styles.button,
             { backgroundColor: theme.primary },
-            (!selectedDate || !time) && styles.buttonDisabled,
+            (!selectedDate || !time || saving) && styles.buttonDisabled,
           ]}
           onPress={handleConfirm}
-          disabled={!selectedDate || !time}
+          disabled={!selectedDate || !time || saving}
         >
-          <Ionicons name="calendar-outline" size={18} color="#fff" />
-          <Text style={styles.buttonText}>Confirmar Agendamento</Text>
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="calendar-outline" size={18} color="#fff" />
+          )}
+
+          <Text style={styles.buttonText}>
+            {saving ? "Confirmando..." : "Confirmar Agendamento"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -250,7 +466,9 @@ export default function SchedulingPage() {
         </Text>
 
         <Text style={[styles.sectionCount, { color: theme.subtext }]}>
-          {selectedDate ? `${appointmentsByDate.length} neste dia` : "Escolha uma data"}
+          {selectedDate
+            ? `${appointmentsByDate.length} neste dia`
+            : "Escolha uma data"}
         </Text>
       </View>
 
@@ -276,7 +494,12 @@ export default function SchedulingPage() {
 
             <View style={styles.appointmentInfo}>
               <View style={styles.badge}>
-                <Ionicons name={appointment.icon} size={14} color={theme.primary} />
+                <Ionicons
+                  name={appointment.icon}
+                  size={14}
+                  color={theme.primary}
+                />
+
                 <Text style={[styles.badgeText, { color: theme.primary }]}>
                   {appointment.label}
                 </Text>
@@ -307,6 +530,17 @@ export default function SchedulingPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
   },
 
   scrollContent: {
@@ -378,6 +612,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
+  disabledOption: {
+    opacity: 0.45,
+  },
+
   optionText: {
     fontSize: 13,
     fontWeight: "600",
@@ -402,6 +640,25 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#fff",
     marginTop: 5,
+  },
+
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fee2e2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 16,
+  },
+
+  errorText: {
+    flex: 1,
+    color: "#b91c1c",
+    fontSize: 13,
+    fontWeight: "600",
   },
 
   button: {
