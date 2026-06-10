@@ -1,196 +1,1725 @@
-// screens/Clientes.tsx
-import React, { useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  TextInput,
-  Modal,
+  ActivityIndicator,
   Alert,
+  FlatList,
+  Linking,
+  Modal,
   SafeAreaView,
-} from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
+
+import { useTheme } from "@/contexts/ThemeContext";
+import { api, endpoints } from "@/services/api";
+
+type BackendVeiculo = {
+  id: number;
+  modeloVeiculo?: string;
+  marcaVeiculo?: string;
+  anoVeiculo?: string;
+  corVeiculo?: string;
+  placaVeiculo?: string;
+  chassiVeiculo?: string;
+  motorVeiculo?: string;
+  combustivelVeiculo?: string;
+  cambioVeiculo?: string;
+  fotoCarroUrl?: string;
+  statusVeiculo?: string;
+  progressoVeiculo?: number;
+  valorTotal?: number;
+  valorEntrada?: number;
+  valorFinanciado?: number;
+  parcelasTotais?: number;
+  parcelasPagas?: number;
+  parcelasRestantes?: number;
+  valorParcela?: number;
+  taxaJuros?: number;
+  statusFinanciamento?: string;
+  statusGarantia?: string;
+  dataProximaRevisao?: string;
+  acessorios?: string;
+  vinIot?: string;
+};
+
+type BackendCliente = {
+  id: number;
+  nome: string;
+  email: string;
+  senha: string;
+  cpf?: string;
+  telefone?: string;
+  endereco?: string;
+  veiculos?: BackendVeiculo[];
+};
+
+type Vehicle = {
+  id: number;
+  modelo: string;
+  marca: string;
+  ano: string;
+  cor: string;
+  motor: string;
+  combustivel: string;
+  cambio: string;
+  chassi: string;
+  placa: string;
+
+  valorTotal: string;
+  entrada: string;
+  valorFinanciado: string;
+  valorParcela: string;
+  parcelasTotais: string;
+  parcelasPagas: string;
+  parcelasRestantes: string;
+  taxaJuros: string;
+
+  status: string;
+  progresso: string;
+  acessorios: string;
+
+  statusFinanciamento: string;
+  statusGarantia: string;
+  proximaRevisao: string;
+  vinIot: string;
+};
 
 type Client = {
   id: number;
-  name: string;
-  phone: string;
-  email?: string;
-  vehicle?: string;
-  notes?: string;
-  createdAt: string;
+  nome: string;
+  telefone: string;
+  email: string;
+  cpf: string;
+  senhaAcesso: string;
+  endereco: string;
+  status: "Lead" | "Cliente";
+  vehicles: Vehicle[];
 };
+
+function gerarSenha() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function initials(nome: string) {
+  return nome
+    .split(" ")
+    .map((parte) => parte[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function formatMoneyDisplay(value?: string) {
+  if (!value) return "R$ 0,00";
+
+  const clean = value.replace(/[^\d,.-]/g, "").replace(",", ".");
+  const number = Number(clean);
+
+  if (Number.isNaN(number)) return value;
+
+  return number.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function toText(value: unknown) {
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function toNumber(value: string) {
+  if (!value.trim()) return null;
+
+  const clean = value.replace(/\./g, "").replace(",", ".");
+  const number = Number(clean);
+
+  if (Number.isNaN(number)) return null;
+
+  return number;
+}
+
+function normalizeVehicle(vehicle: BackendVeiculo): Vehicle {
+  return {
+    id: vehicle.id,
+    modelo: vehicle.modeloVeiculo || "",
+    marca: vehicle.marcaVeiculo || "Toyota",
+    ano: vehicle.anoVeiculo || "",
+    cor: vehicle.corVeiculo || "",
+    motor: vehicle.motorVeiculo || "",
+    combustivel: vehicle.combustivelVeiculo || "",
+    cambio: vehicle.cambioVeiculo || "",
+    chassi: vehicle.chassiVeiculo || "",
+    placa: vehicle.placaVeiculo || "",
+
+    valorTotal: toText(vehicle.valorTotal),
+    entrada: toText(vehicle.valorEntrada),
+    valorFinanciado: toText(vehicle.valorFinanciado),
+    valorParcela: toText(vehicle.valorParcela),
+    parcelasTotais: toText(vehicle.parcelasTotais),
+    parcelasPagas: toText(vehicle.parcelasPagas),
+    parcelasRestantes: toText(vehicle.parcelasRestantes),
+    taxaJuros: toText(vehicle.taxaJuros),
+
+    status: vehicle.statusVeiculo || "Pedido realizado",
+    progresso: toText(vehicle.progressoVeiculo || 0),
+    acessorios: vehicle.acessorios || "",
+
+    statusFinanciamento: vehicle.statusFinanciamento || "ATIVO",
+    statusGarantia: vehicle.statusGarantia || "ATIVA",
+    proximaRevisao: vehicle.dataProximaRevisao || "",
+    vinIot: vehicle.vinIot || "",
+  };
+}
+
+function normalizeClient(client: BackendCliente): Client {
+  const vehicles = (client.veiculos || []).map(normalizeVehicle);
+
+  return {
+    id: client.id,
+    nome: client.nome || "",
+    telefone: client.telefone || "",
+    email: client.email || "",
+    cpf: client.cpf || "",
+    senhaAcesso: client.senha || "",
+    endereco: client.endereco || "",
+    status: vehicles.length > 0 ? "Cliente" : "Lead",
+    vehicles,
+  };
+}
 
 export default function Clientes() {
   const { colors } = useTheme();
+  const router = useRouter();
+  const { width } = useWindowDimensions();
 
-  const [clients, setClients] = useState<Client[]>([
-    { id: 1, name: "João Silva", phone: "(11) 98765-4321", email: "joao@email.com", vehicle: "Honda Civic 2023", notes: "Interessado em test-drive", createdAt: "2026-04-20" },
-    { id: 2, name: "Maria Oliveira", phone: "(21) 99876-5432", vehicle: "Toyota Corolla", createdAt: "2026-04-25" },
-  ]);
+  const isWideForm = width > 650;
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [form, setForm] = useState({
-    name: "", phone: "", email: "", vehicle: "", notes: ""
+  const [clientModalVisible, setClientModalVisible] = useState(false);
+  const [vehiclesModalVisible, setVehiclesModalVisible] = useState(false);
+  const [vehicleFormVisible, setVehicleFormVisible] = useState(false);
+
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+
+  const [clientForm, setClientForm] = useState({
+    nome: "",
+    telefone: "",
+    email: "",
+    cpf: "",
+    senhaAcesso: "",
+    endereco: "",
   });
 
-  const filteredClients = clients.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.phone.includes(searchQuery)
+  const [vehicleForm, setVehicleForm] = useState({
+    modelo: "",
+    marca: "Toyota",
+    ano: "",
+    cor: "",
+    motor: "",
+    combustivel: "",
+    cambio: "",
+    chassi: "",
+    placa: "",
+
+    valorTotal: "",
+    entrada: "",
+    valorFinanciado: "",
+    valorParcela: "",
+    parcelasTotais: "",
+    parcelasPagas: "",
+    parcelasRestantes: "",
+    taxaJuros: "",
+
+    status: "",
+    progresso: "",
+    acessorios: "",
+
+    statusFinanciamento: "ATIVO",
+    statusGarantia: "ATIVA",
+    proximaRevisao: "",
+    vinIot: "",
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      carregarClientes();
+    }, [])
   );
 
-  const openModal = (client?: Client) => {
-    if (client) {
-      setEditingClient(client);
-      setForm({
-        name: client.name,
-        phone: client.phone,
-        email: client.email || "",
-        vehicle: client.vehicle || "",
-        notes: client.notes || "",
-      });
-    } else {
-      setEditingClient(null);
-      setForm({ name: "", phone: "", email: "", vehicle: "", notes: "" });
-    }
-    setModalVisible(true);
-  };
+  async function carregarClientes() {
+    try {
+      setLoading(true);
 
-  const handleSave = () => {
-    if (!form.name.trim() || !form.phone.trim()) {
-      Alert.alert("Erro", "Nome e telefone são obrigatórios.");
+      const response = await api.get<BackendCliente[]>(endpoints.clientes);
+
+      const clientesNormalizados = response.map(normalizeClient);
+
+      setClients(clientesNormalizados);
+
+      if (selectedClient) {
+        const clienteAtualizado = clientesNormalizados.find(
+          (client) => client.id === selectedClient.id
+        );
+
+        if (clienteAtualizado) {
+          setSelectedClient(clienteAtualizado);
+        }
+      }
+    } catch (error: any) {
+      Alert.alert(
+        "Erro",
+        error?.message || "Não foi possível carregar os clientes."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const filteredClients = clients.filter((client) => {
+    const query = searchQuery.toLowerCase();
+
+    return (
+      client.nome.toLowerCase().includes(query) ||
+      client.email.toLowerCase().includes(query) ||
+      client.telefone.includes(query) ||
+      client.cpf.includes(query)
+    );
+  });
+
+  function openNewClientModal() {
+    setEditingClient(null);
+
+    setClientForm({
+      nome: "",
+      telefone: "",
+      email: "",
+      cpf: "",
+      senhaAcesso: gerarSenha(),
+      endereco: "",
+    });
+
+    setClientModalVisible(true);
+  }
+
+  function openEditClientModal(client: Client) {
+    setEditingClient(client);
+
+    setClientForm({
+      nome: client.nome,
+      telefone: client.telefone,
+      email: client.email,
+      cpf: client.cpf,
+      senhaAcesso: client.senhaAcesso,
+      endereco: client.endereco,
+    });
+
+    setClientModalVisible(true);
+  }
+
+  async function saveClient() {
+    const nome = clientForm.nome.trim();
+    const email = clientForm.email.trim().toLowerCase();
+    const senha = clientForm.senhaAcesso.trim();
+
+    if (!nome || !email || !senha) {
+      Alert.alert("Erro", "Nome, e-mail e senha são obrigatórios.");
       return;
     }
 
-    if (editingClient) {
-      // Editar
-      setClients(prev => prev.map(c =>
-        c.id === editingClient.id
-          ? { ...c, ...form, name: form.name.trim(), phone: form.phone.trim() }
-          : c
-      ));
-    } else {
-      // Novo
-      const newClient: Client = {
-        id: Date.now(),
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim() || undefined,
-        vehicle: form.vehicle.trim() || undefined,
-        notes: form.notes.trim() || undefined,
-        createdAt: new Date().toISOString().split("T")[0],
+    try {
+      setSaving(true);
+
+      const payload = {
+        nome,
+        email,
+        senha,
+        cpf: clientForm.cpf.trim(),
+        telefone: clientForm.telefone.trim(),
+        endereco: clientForm.endereco.trim(),
       };
-      setClients(prev => [newClient, ...prev]);
+
+      if (editingClient) {
+        await api.put<BackendCliente>(
+          `${endpoints.clientes}/${editingClient.id}`,
+          payload
+        );
+
+        Alert.alert("Sucesso", "Cliente atualizado com sucesso.");
+      } else {
+        await api.post<BackendCliente>(endpoints.cadastroCliente, payload);
+
+        Alert.alert(
+          "Cliente criado",
+          `Acesso do cliente:\n\nE-mail: ${email}\nSenha: ${senha}`
+        );
+      }
+
+      setClientModalVisible(false);
+      setEditingClient(null);
+      await carregarClientes();
+    } catch (error: any) {
+      Alert.alert(
+        "Erro",
+        error?.message || "Não foi possível salvar o cliente."
+      );
+    } finally {
+      setSaving(false);
     }
+  }
 
-    setModalVisible(false);
-    setEditingClient(null);
-    setForm({ name: "", phone: "", email: "", vehicle: "", notes: "" });
-  };
-
-  const handleDelete = (id: number) => {
-    Alert.alert("Excluir Cliente", "Deseja realmente excluir este cliente?", [
-      { text: "Cancelar", style: "cancel" },
+  function deleteClient(client: Client) {
+    Alert.alert("Excluir cliente", `Deseja realmente excluir ${client.nome}?`, [
+      {
+        text: "Cancelar",
+        style: "cancel",
+      },
       {
         text: "Excluir",
         style: "destructive",
-        onPress: () => setClients(prev => prev.filter(c => c.id !== id))
-      }
+        onPress: async () => {
+          try {
+            await api.delete<void>(`${endpoints.clientes}/${client.id}`);
+            await carregarClientes();
+          } catch (error: any) {
+            Alert.alert(
+              "Erro",
+              error?.message || "Não foi possível excluir o cliente."
+            );
+          }
+        },
+      },
     ]);
-  };
+  }
+
+  function callClient(client: Client) {
+    const phone = client.telefone.replace(/\D/g, "");
+
+    if (!phone) {
+      Alert.alert(
+        "Telefone não informado",
+        "Este cliente não possui telefone cadastrado."
+      );
+      return;
+    }
+
+    Linking.openURL(`tel:${phone}`);
+  }
+
+  function openVehiclesModal(client: Client) {
+    setSelectedClient(client);
+    setVehiclesModalVisible(true);
+  }
+
+  function goToNewOrder(client: Client) {
+    router.push({
+      pathname: "/(tabs)/veiculos",
+      params: {
+        clienteId: String(client.id),
+      },
+    });
+  }
+
+  function openEditVehicleModal(vehicle: Vehicle) {
+    setEditingVehicle(vehicle);
+
+    setVehicleForm({
+      modelo: vehicle.modelo,
+      marca: vehicle.marca,
+      ano: vehicle.ano,
+      cor: vehicle.cor,
+      motor: vehicle.motor,
+      combustivel: vehicle.combustivel,
+      cambio: vehicle.cambio,
+      chassi: vehicle.chassi,
+      placa: vehicle.placa,
+
+      valorTotal: vehicle.valorTotal,
+      entrada: vehicle.entrada,
+      valorFinanciado: vehicle.valorFinanciado,
+      valorParcela: vehicle.valorParcela,
+      parcelasTotais: vehicle.parcelasTotais,
+      parcelasPagas: vehicle.parcelasPagas,
+      parcelasRestantes: vehicle.parcelasRestantes,
+      taxaJuros: vehicle.taxaJuros,
+
+      status: vehicle.status,
+      progresso: vehicle.progresso,
+      acessorios: vehicle.acessorios,
+
+      statusFinanciamento: vehicle.statusFinanciamento,
+      statusGarantia: vehicle.statusGarantia,
+      proximaRevisao: vehicle.proximaRevisao,
+      vinIot: vehicle.vinIot,
+    });
+
+    setVehicleFormVisible(true);
+  }
+
+  async function saveVehicle() {
+    if (!selectedClient || !editingVehicle) {
+      Alert.alert("Erro", "Nenhum veículo selecionado.");
+      return;
+    }
+
+    if (!vehicleForm.modelo || !vehicleForm.ano) {
+      Alert.alert("Erro", "Modelo e ano são obrigatórios.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const payload = {
+        clienteId: selectedClient.id,
+
+        modeloVeiculo: vehicleForm.modelo,
+        marcaVeiculo: vehicleForm.marca,
+        anoVeiculo: vehicleForm.ano,
+        corVeiculo: vehicleForm.cor,
+        placaVeiculo: vehicleForm.placa,
+        chassiVeiculo: vehicleForm.chassi,
+        motorVeiculo: vehicleForm.motor,
+        combustivelVeiculo: vehicleForm.combustivel,
+        cambioVeiculo: vehicleForm.cambio,
+
+        statusVeiculo: vehicleForm.status,
+        progressoVeiculo: toNumber(vehicleForm.progresso),
+
+        valorTotal: toNumber(vehicleForm.valorTotal),
+        valorEntrada: toNumber(vehicleForm.entrada),
+        valorFinanciado: toNumber(vehicleForm.valorFinanciado),
+        valorParcela: toNumber(vehicleForm.valorParcela),
+        parcelasTotais: toNumber(vehicleForm.parcelasTotais),
+        parcelasPagas: toNumber(vehicleForm.parcelasPagas),
+        parcelasRestantes: toNumber(vehicleForm.parcelasRestantes),
+        taxaJuros: toNumber(vehicleForm.taxaJuros),
+
+        statusFinanciamento: vehicleForm.statusFinanciamento,
+        statusGarantia: vehicleForm.statusGarantia,
+        dataProximaRevisao: vehicleForm.proximaRevisao,
+
+        acessorios: vehicleForm.acessorios,
+        vinIot: vehicleForm.vinIot,
+      };
+
+      await api.put<BackendVeiculo>(
+        endpoints.veiculoPorId(editingVehicle.id),
+        payload
+      );
+
+      setVehicleFormVisible(false);
+      setEditingVehicle(null);
+
+      Alert.alert("Sucesso", "Veículo atualizado com sucesso.");
+
+      await carregarClientes();
+    } catch (error: any) {
+      Alert.alert(
+        "Erro",
+        error?.message || "Não foi possível atualizar o veículo."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function deleteVehicle(vehicle: Vehicle) {
+    Alert.alert(
+      "Excluir veículo",
+      `Deseja realmente excluir ${vehicle.modelo}?`,
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete<void>(endpoints.veiculoPorId(vehicle.id));
+              await carregarClientes();
+              Alert.alert("Sucesso", "Veículo excluído com sucesso.");
+            } catch (error: any) {
+              Alert.alert(
+                "Erro",
+                error?.message || "Não foi possível excluir o veículo."
+              );
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.subtext }]}>
+          Carregando clientes...
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Clientes</Text>
-        <TouchableOpacity style={[styles.addButton, { backgroundColor: "#DC2626" }]} onPress={() => openModal()}>
-          <Ionicons name="add" size={24} color="#fff" />
+        <View>
+          <Text style={[styles.title, { color: colors.text }]}>Clientes</Text>
+
+          <Text style={[styles.subtitle, { color: colors.subtext }]}>
+            {clients.length} clientes cadastrados
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={openNewClientModal}
+        >
+          <Ionicons name="add" size={25} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={[styles.searchBox, { backgroundColor: colors.card }]}>
-          <Ionicons name="search" size={20} color={colors.text + "70"} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Buscar cliente..."
-            placeholderTextColor={colors.text + "70"}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+      <View style={[styles.searchBox, { backgroundColor: colors.input }]}>
+        <Ionicons name="search-outline" size={19} color={colors.subtext} />
+
+        <TextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Buscar cliente..."
+          placeholderTextColor={colors.subtext}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
 
       <FlatList
         data={filteredClients}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={[styles.clientCard, { backgroundColor: colors.card }]}
-            onPress={() => openModal(item)}
+          <View
+            style={[
+              styles.clientCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
           >
-            <View style={styles.clientInfo}>
-              <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
-              <Text style={[styles.phone, { color: colors.text + "90" }]}>{item.phone}</Text>
-              {item.vehicle && <Text style={{ color: colors.text + "80" }}>🚗 {item.vehicle}</Text>}
+            <View style={styles.clientTop}>
+              <View style={[styles.avatar, { backgroundColor: colors.box }]}>
+                <Text style={[styles.avatarText, { color: colors.text }]}>
+                  {initials(item.nome)}
+                </Text>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.clientName, { color: colors.text }]}>
+                  {item.nome}
+                </Text>
+
+                <Text style={[styles.clientInfo, { color: colors.subtext }]}>
+                  {item.vehicles.length > 0
+                    ? `${item.vehicles.length} veículo(s) • ${
+                        item.telefone || item.email
+                      }`
+                    : `Sem veículo • ${item.email}`}
+                </Text>
+              </View>
+
+              <View style={styles.leadBadge}>
+                <Text style={styles.leadText}>{item.status}</Text>
+              </View>
             </View>
-            <TouchableOpacity onPress={(e) => { e.stopPropagation(); handleDelete(item.id); }}>
-              <Ionicons name="trash-outline" size={24} color="#EF4444" />
-            </TouchableOpacity>
-          </TouchableOpacity>
+
+            <View style={styles.actionsRow}>
+              <IconButton
+                icon="eye-outline"
+                color={colors.text}
+                background={colors.box}
+                onPress={() => openVehiclesModal(item)}
+              />
+
+              <IconButton
+                icon="car-sport-outline"
+                color={colors.text}
+                background={colors.box}
+                onPress={() => goToNewOrder(item)}
+              />
+
+              <IconButton
+                icon="create-outline"
+                color={colors.text}
+                background={colors.box}
+                onPress={() => openEditClientModal(item)}
+              />
+
+              <IconButton
+                icon="trash-outline"
+                color={colors.danger}
+                background="rgba(239,68,68,0.10)"
+                onPress={() => deleteClient(item)}
+              />
+
+              <IconButton
+                icon="call-outline"
+                color={colors.text}
+                background={colors.box}
+                onPress={() => callClient(item)}
+              />
+            </View>
+          </View>
         )}
       />
 
-      {/* Modal */}
-      <Modal visible={modalVisible} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Text style={{ color: colors.text, fontSize: 17 }}>Cancelar</Text>
+      <Modal visible={clientModalVisible} animationType="slide">
+        <SafeAreaView
+          style={[styles.modalContainer, { backgroundColor: colors.background }]}
+        >
+          <View
+            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+          >
+            <TouchableOpacity onPress={() => setClientModalVisible(false)}>
+              <Text style={[styles.modalCancel, { color: colors.text }]}>
+                Cancelar
+              </Text>
             </TouchableOpacity>
+
             <Text style={[styles.modalTitle, { color: colors.text }]}>
-              {editingClient ? "Editar Cliente" : "Novo Cliente"}
+              {editingClient ? "Editar cliente" : "Novo cliente"}
             </Text>
-            <TouchableOpacity onPress={handleSave}>
-              <Text style={{ color: "#DC2626", fontSize: 17, fontWeight: "bold" }}>Salvar</Text>
+
+            <TouchableOpacity onPress={saveClient} disabled={saving}>
+              <Text style={[styles.modalSave, { color: colors.primary }]}>
+                {saving ? "Salvando..." : "Salvar"}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.modalContent}>
-            <TextInput style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.text + "30" }]} placeholder="Nome *" placeholderTextColor={colors.text+"70"} value={form.name} onChangeText={t => setForm({...form, name: t})} />
-            <TextInput style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.text + "30" }]} placeholder="Telefone *" placeholderTextColor={colors.text+"70"} value={form.phone} onChangeText={t => setForm({...form, phone: t})} keyboardType="phone-pad" />
-            <TextInput style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.text + "30" }]} placeholder="Email" placeholderTextColor={colors.text+"70"} value={form.email} onChangeText={t => setForm({...form, email: t})} keyboardType="email-address" />
-            <TextInput style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.text + "30" }]} placeholder="Veículo de interesse" placeholderTextColor={colors.text+"70"} value={form.vehicle} onChangeText={t => setForm({...form, vehicle: t})} />
-            <TextInput style={[styles.input, styles.textArea, { backgroundColor: colors.card, color: colors.text, borderColor: colors.text + "30" }]} placeholder="Observações" placeholderTextColor={colors.text+"70"} value={form.notes} onChangeText={t => setForm({...form, notes: t})} multiline />
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            <InputLabel label="Nome" color={colors.subtext} />
+
+            <Input
+              value={clientForm.nome}
+              placeholder="Nome completo"
+              colors={colors}
+              onChangeText={(text) =>
+                setClientForm({ ...clientForm, nome: text })
+              }
+            />
+
+            <InputLabel label="E-mail de acesso" color={colors.subtext} />
+
+            <Input
+              value={clientForm.email}
+              placeholder="cliente@email.com"
+              colors={colors}
+              keyboardType="email-address"
+              onChangeText={(text) =>
+                setClientForm({
+                  ...clientForm,
+                  email: text.trim().toLowerCase(),
+                })
+              }
+            />
+
+            <InputLabel
+              label="Senha de acesso ao app cliente"
+              color={colors.subtext}
+            />
+
+            <Input
+              value={clientForm.senhaAcesso}
+              placeholder="Senha temporária"
+              colors={colors}
+              onChangeText={(text) =>
+                setClientForm({ ...clientForm, senhaAcesso: text })
+              }
+            />
+
+            <InputLabel label="CPF" color={colors.subtext} />
+
+            <Input
+              value={clientForm.cpf}
+              placeholder="000.000.000-00"
+              colors={colors}
+              onChangeText={(text) =>
+                setClientForm({ ...clientForm, cpf: text })
+              }
+            />
+
+            <InputLabel label="Telefone" color={colors.subtext} />
+
+            <Input
+              value={clientForm.telefone}
+              placeholder="(11) 99999-9999"
+              colors={colors}
+              keyboardType="phone-pad"
+              onChangeText={(text) =>
+                setClientForm({ ...clientForm, telefone: text })
+              }
+            />
+
+            <InputLabel label="Endereço" color={colors.subtext} />
+
+            <Input
+              value={clientForm.endereco}
+              placeholder="Endereço do cliente"
+              colors={colors}
+              onChangeText={(text) =>
+                setClientForm({ ...clientForm, endereco: text })
+              }
+            />
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={vehiclesModalVisible} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View
+            style={[
+              styles.vehiclesModal,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.vehiclesHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.vehiclesTitle, { color: colors.text }]}>
+                  Veículos de {selectedClient?.nome}
+                </Text>
+
+                
+              </View>
+
+              <TouchableOpacity onPress={() => setVehiclesModalVisible(false)}>
+                <Ionicons
+                  name="close-outline"
+                  size={26}
+                  color={colors.subtext}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 430 }}>
+              {selectedClient?.vehicles.length === 0 && (
+                <Text style={[styles.emptyText, { color: colors.subtext }]}>
+                  Este cliente ainda não possui veículos vinculados.
+                </Text>
+              )}
+
+              {selectedClient?.vehicles.map((vehicle) => (
+                <View
+                  key={vehicle.id}
+                  style={[
+                    styles.vehicleCard,
+                    { backgroundColor: colors.box, borderColor: colors.border },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.vehicleName, { color: colors.text }]}>
+                      {vehicle.modelo || "Veículo sem modelo"}
+                    </Text>
+
+                    <Text
+                      style={[styles.vehicleDetail, { color: colors.subtext }]}
+                    >
+                      {vehicle.ano || "Sem ano"} • {vehicle.cor || "Sem cor"} •
+                      Chassi: {vehicle.chassi || "Não informado"}
+                    </Text>
+
+                    <Text
+                      style={[styles.vehicleDetail, { color: colors.subtext }]}
+                    >
+                      Total: {formatMoneyDisplay(vehicle.valorTotal)} • Parcela:{" "}
+                      {formatMoneyDisplay(vehicle.valorParcela)}
+                    </Text>
+
+                    <Text
+                      style={[styles.vehicleStatus, { color: colors.primary }]}
+                    >
+                      {vehicle.status}
+                    </Text>
+
+                    <Text
+                      style={[styles.vehicleDetail, { color: colors.subtext }]}
+                    >
+                      Financiamento: {vehicle.statusFinanciamento}
+                    </Text>
+
+                    <Text
+                      style={[styles.vehicleDetail, { color: colors.subtext }]}
+                    >
+                      Garantia: {vehicle.statusGarantia}
+                    </Text>
+
+                    {vehicle.proximaRevisao ? (
+                      <Text
+                        style={[
+                          styles.vehicleDetail,
+                          { color: colors.subtext },
+                        ]}
+                      >
+                        Próxima revisão: {vehicle.proximaRevisao}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.vehicleActions}>
+                    <TouchableOpacity
+                      style={[
+                        styles.smallAction,
+                        { borderColor: colors.border },
+                      ]}
+                      onPress={() => openEditVehicleModal(vehicle)}
+                    >
+                      <Ionicons
+                        name="create-outline"
+                        size={18}
+                        color={colors.text}
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.smallAction,
+                        {
+                          backgroundColor: colors.danger,
+                          borderColor: colors.danger,
+                        },
+                      ]}
+                      onPress={() => deleteVehicle(vehicle)}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={styles.vehiclesFooter}>
+              <TouchableOpacity
+                style={[styles.secondaryButton, { borderColor: colors.border }]}
+                onPress={() => setVehiclesModalVisible(false)}
+              >
+                <Text
+                  style={[styles.secondaryButtonText, { color: colors.text }]}
+                >
+                  Fechar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => {
+                  if (selectedClient) {
+                    setVehiclesModalVisible(false);
+                    goToNewOrder(selectedClient);
+                  }
+                }}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={styles.primaryButtonText}>Novo pedido</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+        </View>
+      </Modal>
+
+      <Modal visible={vehicleFormVisible} animationType="slide">
+        <SafeAreaView
+          style={[styles.modalContainer, { backgroundColor: colors.background }]}
+        >
+          <View
+            style={[
+              styles.vehicleEditHeader,
+              { borderBottomColor: colors.border },
+            ]}
+          >
+            <View>
+              <Text style={[styles.editTitle, { color: colors.text }]}>
+                Editar veículo
+              </Text>
+
+              <Text style={[styles.editSubtitle, { color: colors.subtext }]}>
+                Atualize os dados técnicos e financeiros.
+              </Text>
+            </View>
+
+            <TouchableOpacity onPress={() => setVehicleFormVisible(false)}>
+              <Ionicons name="close-outline" size={26} color={colors.subtext} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.vehicleEditContent}>
+            <View style={styles.editGrid}>
+              <EditInput
+                label="Modelo"
+                value={vehicleForm.modelo}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, modelo: text })
+                }
+              />
+
+              <EditInput
+                label="Marca"
+                value={vehicleForm.marca}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, marca: text })
+                }
+              />
+
+              <EditInput
+                label="Ano"
+                value={vehicleForm.ano}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, ano: text })
+                }
+              />
+
+              <EditInput
+                label="Cor"
+                value={vehicleForm.cor}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, cor: text })
+                }
+              />
+
+              <EditInput
+                label="Placa"
+                value={vehicleForm.placa}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, placa: text })
+                }
+              />
+
+              <EditInput
+                label="Chassi"
+                value={vehicleForm.chassi}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, chassi: text })
+                }
+              />
+
+              <EditInput
+                label="Motor"
+                value={vehicleForm.motor}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, motor: text })
+                }
+              />
+
+              <EditInput
+                label="Combustível"
+                value={vehicleForm.combustivel}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, combustivel: text })
+                }
+              />
+
+              <EditInput
+                label="Câmbio"
+                value={vehicleForm.cambio}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, cambio: text })
+                }
+              />
+
+              <EditInput
+                label="Valor total"
+                value={vehicleForm.valorTotal}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="numeric"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, valorTotal: text })
+                }
+              />
+
+              <EditInput
+                label="Entrada"
+                value={vehicleForm.entrada}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="numeric"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, entrada: text })
+                }
+              />
+
+              <EditInput
+                label="Valor financiado"
+                value={vehicleForm.valorFinanciado}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="numeric"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, valorFinanciado: text })
+                }
+              />
+
+              <EditInput
+                label="Valor parcela"
+                value={vehicleForm.valorParcela}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="numeric"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, valorParcela: text })
+                }
+              />
+
+              <EditInput
+                label="Parcelas totais"
+                value={vehicleForm.parcelasTotais}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="numeric"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, parcelasTotais: text })
+                }
+              />
+
+              <EditInput
+                label="Parcelas pagas"
+                value={vehicleForm.parcelasPagas}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="numeric"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, parcelasPagas: text })
+                }
+              />
+
+              <EditInput
+                label="Parcelas restantes"
+                value={vehicleForm.parcelasRestantes}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="numeric"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, parcelasRestantes: text })
+                }
+              />
+
+              <EditInput
+                label="Taxa de juros"
+                value={vehicleForm.taxaJuros}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="decimal-pad"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, taxaJuros: text })
+                }
+              />
+
+              <EditInput
+                label="Status veículo"
+                value={vehicleForm.status}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, status: text })
+                }
+              />
+
+              <EditInput
+                label="Progresso"
+                value={vehicleForm.progresso}
+                colors={colors}
+                wide={isWideForm}
+                keyboardType="numeric"
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, progresso: text })
+                }
+              />
+
+              <EditInput
+                label="Status financiamento"
+                value={vehicleForm.statusFinanciamento}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    statusFinanciamento: text,
+                  })
+                }
+              />
+
+              <EditInput
+                label="Status garantia"
+                value={vehicleForm.statusGarantia}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, statusGarantia: text })
+                }
+              />
+
+              <EditInput
+                label="Próxima revisão"
+                value={vehicleForm.proximaRevisao}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, proximaRevisao: text })
+                }
+              />
+
+              <EditInput
+                label="VIN IoT"
+                value={vehicleForm.vinIot}
+                colors={colors}
+                wide={isWideForm}
+                onChangeText={(text) =>
+                  setVehicleForm({ ...vehicleForm, vinIot: text })
+                }
+              />
+            </View>
+
+            <InputLabel label="Acessórios" color={colors.text} />
+
+            <TextInput
+              value={vehicleForm.acessorios}
+              placeholder="Ex: Câmera de ré, Tapetes de borracha"
+              placeholderTextColor={colors.subtext}
+              onChangeText={(text) =>
+                setVehicleForm({ ...vehicleForm, acessorios: text })
+              }
+              style={[
+                styles.editInput,
+                {
+                  backgroundColor: colors.input,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+            />
+
+            <View style={styles.editFooter}>
+              <TouchableOpacity
+                style={[styles.cancelEditButton, { borderColor: colors.border }]}
+                onPress={() => setVehicleFormVisible(false)}
+              >
+                <Text style={[styles.cancelEditText, { color: colors.text }]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.saveEditButton,
+                  {
+                    backgroundColor: colors.primary,
+                    opacity: saving ? 0.7 : 1,
+                  },
+                ]}
+                onPress={saveVehicle}
+                disabled={saving}
+              >
+                <Text style={styles.saveEditText}>
+                  {saving ? "Salvando..." : "Salvar veículo"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
 }
 
+function IconButton({
+  icon,
+  color,
+  background,
+  onPress,
+}: {
+  icon: any;
+  color: string;
+  background: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.iconButton, { backgroundColor: background }]}
+      onPress={onPress}
+    >
+      <Ionicons name={icon} size={19} color={color} />
+    </TouchableOpacity>
+  );
+}
+
+function InputLabel({ label, color }: { label: string; color: string }) {
+  return <Text style={[styles.inputLabel, { color }]}>{label}</Text>;
+}
+
+function Input({
+  value,
+  placeholder,
+  colors,
+  onChangeText,
+  keyboardType,
+}: {
+  value: string;
+  placeholder: string;
+  colors: any;
+  onChangeText: (text: string) => void;
+  keyboardType?: any;
+}) {
+  return (
+    <TextInput
+      value={value}
+      placeholder={placeholder}
+      placeholderTextColor={colors.subtext}
+      keyboardType={keyboardType}
+      onChangeText={onChangeText}
+      style={[
+        styles.input,
+        {
+          backgroundColor: colors.input,
+          color: colors.text,
+          borderColor: colors.border,
+        },
+      ]}
+    />
+  );
+}
+
+function EditInput({
+  label,
+  value,
+  colors,
+  onChangeText,
+  keyboardType,
+  wide,
+}: {
+  label: string;
+  value: string;
+  colors: any;
+  onChangeText: (text: string) => void;
+  keyboardType?: any;
+  wide: boolean;
+}) {
+  return (
+    <View style={[styles.editInputWrap, { width: wide ? "48%" : "100%" }]}>
+      <InputLabel label={label} color={colors.text} />
+
+      <TextInput
+        value={value}
+        keyboardType={keyboardType}
+        placeholderTextColor={colors.subtext}
+        onChangeText={onChangeText}
+        style={[
+          styles.editInput,
+          {
+            backgroundColor: colors.input,
+            color: colors.text,
+            borderColor: colors.border,
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold' },
-  addButton: { width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  searchContainer: { paddingHorizontal: 16, paddingBottom: 12 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, borderRadius: 12, height: 50 },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 16 },
-  list: { padding: 16 },
-  clientCard: { flexDirection: 'row', padding: 16, borderRadius: 14, marginBottom: 12, alignItems: 'center' },
-  clientInfo: { flex: 1 },
-  name: { fontSize: 18, fontWeight: '600' },
-  phone: { fontSize: 15, marginTop: 4 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: '#333' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold' },
-  modalContent: { padding: 20 },
-  input: { borderWidth: 1, borderRadius: 10, padding: 14, marginBottom: 14, fontSize: 16 },
-  textArea: { height: 100, textAlignVertical: 'top' },
+  container: {
+    flex: 1,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+  },
+
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+  },
+
+  subtitle: {
+    marginTop: 4,
+    fontSize: 14,
+  },
+
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  searchBox: {
+    marginHorizontal: 20,
+    marginBottom: 14,
+    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+  },
+
+  list: {
+    paddingHorizontal: 20,
+    paddingBottom: 120,
+  },
+
+  clientCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 15,
+    marginBottom: 12,
+  },
+
+  clientTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  avatarText: {
+    fontWeight: "bold",
+    fontSize: 13,
+  },
+
+  clientName: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+
+  clientInfo: {
+    marginTop: 3,
+    fontSize: 12,
+  },
+
+  leadBadge: {
+    backgroundColor: "rgba(37,99,235,0.2)",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+
+  leadText: {
+    color: "#60A5FA",
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+
+  actionsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 14,
+  },
+
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modalContainer: {
+    flex: 1,
+  },
+
+  modalHeader: {
+    padding: 18,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  modalCancel: {
+    fontSize: 15,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  modalSave: {
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+
+  modalContent: {
+    padding: 20,
+    paddingBottom: 80,
+  },
+
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    minHeight: 50,
+    marginBottom: 14,
+    fontSize: 15,
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.78)",
+    justifyContent: "center",
+    padding: 18,
+  },
+
+  vehiclesModal: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+    maxHeight: "88%",
+  },
+
+  vehiclesHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+
+  vehiclesTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  vehiclesSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+  },
+
+  emptyText: {
+    textAlign: "center",
+    padding: 30,
+    fontSize: 14,
+  },
+
+  vehicleCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+
+  vehicleDetail: {
+    marginTop: 4,
+    fontSize: 12,
+  },
+
+  vehicleStatus: {
+    marginTop: 5,
+    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+
+  vehicleActions: {
+    gap: 8,
+    justifyContent: "center",
+  },
+
+  smallAction: {
+    width: 42,
+    height: 38,
+    borderRadius: 11,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  vehiclesFooter: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+    justifyContent: "flex-end",
+  },
+
+  secondaryButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    justifyContent: "center",
+  },
+
+  secondaryButtonText: {
+    fontWeight: "bold",
+  },
+
+  primaryButton: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  primaryButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+
+  vehicleEditHeader: {
+    padding: 18,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  editTitle: {
+    fontSize: 21,
+    fontWeight: "bold",
+  },
+
+  editSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+
+  vehicleEditContent: {
+    padding: 20,
+    paddingBottom: 100,
+  },
+
+  editGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+
+  editInputWrap: {
+    marginBottom: 14,
+  },
+
+  editInput: {
+    borderWidth: 1,
+    borderRadius: 11,
+    minHeight: 46,
+    paddingHorizontal: 13,
+    fontSize: 14,
+  },
+
+  editFooter: {
+    marginTop: 18,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+
+  cancelEditButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    minHeight: 46,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  cancelEditText: {
+    fontWeight: "bold",
+  },
+
+  saveEditButton: {
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    minHeight: 46,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  saveEditText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
 });

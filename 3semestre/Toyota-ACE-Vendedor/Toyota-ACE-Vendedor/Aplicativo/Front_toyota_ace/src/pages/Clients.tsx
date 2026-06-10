@@ -721,18 +721,7 @@ const Clients = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Foto URL</Label>
-              <Input
-                value={vehicleForm.fotoCarroUrl}
-                onChange={(e) =>
-                  setVehicleForm({
-                    ...vehicleForm,
-                    fotoCarroUrl: e.target.value,
-                  })
-                }
-              />
-            </div>
+            
 
             <div className="space-y-2">
               <Label>Valor total</Label>

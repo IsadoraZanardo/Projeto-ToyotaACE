@@ -44,6 +44,18 @@ export type Veiculo = {
   vinIot?: string;
 };
 
+export type PerfilUsuario = "ADMIN" | "VENDEDOR";
+
+export type UsuarioInterno = {
+  id?: number;
+  nome: string;
+  email: string;
+  senha?: string;
+  perfil: PerfilUsuario;
+  ativo: boolean;
+  createdAt?: string;
+};
+
 export type CadastroRequest = {
   nome: string;
   email: string;
@@ -103,7 +115,12 @@ async function request<T>(
     try {
       const data = await response.json();
       message = data?.message || data?.erro || data?.error || message;
-    } catch {}
+    } catch {
+      try {
+        const text = await response.text();
+        if (text) message = text;
+      } catch {}
+    }
 
     throw new Error(message);
   }
@@ -155,6 +172,34 @@ export const api = {
 
   deletarVeiculo: (veiculoId: number) =>
     request<void>(`/veiculos/${veiculoId}`, {
+      method: "DELETE",
+    }),
+
+  loginUsuario: (email: string, senha: string) =>
+    request<UsuarioInterno>("/usuarios/login", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        senha,
+      }),
+    }),
+
+  listarUsuarios: () => request<UsuarioInterno[]>("/usuarios"),
+
+  criarUsuario: (dados: UsuarioInterno) =>
+    request<UsuarioInterno>("/usuarios", {
+      method: "POST",
+      body: JSON.stringify(dados),
+    }),
+
+  atualizarUsuario: (id: number, dados: Partial<UsuarioInterno>) =>
+    request<UsuarioInterno>(`/usuarios/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(dados),
+    }),
+
+  desativarUsuario: (id: number) =>
+    request<void>(`/usuarios/${id}`, {
       method: "DELETE",
     }),
 };

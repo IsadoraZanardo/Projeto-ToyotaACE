@@ -14,18 +14,21 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useTheme } from "@/hooks/useTheme";
+
+import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function Login() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erroEmail, setErroEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const senhaRef = useRef<any>(null);
+  const senhaRef = useRef<TextInput>(null);
 
   function validarEmail(valor: string) {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,24 +53,19 @@ export default function Login() {
     const emailValido = validarEmail(email);
 
     if (!emailValido || !senha) {
-      Alert.alert("Erro", "Preencha os campos corretamente");
+      Alert.alert("Erro", "Preencha os campos corretamente.");
       return;
     }
 
     setLoading(true);
 
     try {
-      // 🔥 FUTURO BACKEND AQUI
-      // const response = await fetch("SUA_API/login", {...})
+      await login(email, senha);
 
-      // Simulação rápida
-      setTimeout(() => {
-        router.replace("/(tabs)");
-        setLoading(false);
-      }, 800);
-
-    } catch (error) {
-      Alert.alert("Erro", "Falha ao fazer login");
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      Alert.alert("Erro ao entrar", error?.message || "Falha ao fazer login.");
+    } finally {
       setLoading(false);
     }
   }
@@ -87,36 +85,31 @@ export default function Login() {
           blurRadius={isDark ? 6 : 2}
         >
           <View style={styles.container}>
-
-            {/* LOGO */}
             <View style={styles.logoContainer}>
               <Image
                 source={require("@/assets/images/toyota_logo.png")}
                 style={styles.logo}
               />
+
               <Text style={styles.logoText}>TOYOTA ACE</Text>
             </View>
 
-            {/* CARD */}
             <View
               style={[
                 styles.card,
                 {
                   backgroundColor: isDark
-                    ? "rgba(30,41,59,0.85)"
-                    : "rgba(255,255,255,0.9)",
+                    ? "rgba(30,41,59,0.88)"
+                    : "rgba(255,255,255,0.92)",
                 },
               ]}
             >
-              <Text style={[styles.title, { color: colors.text }]}>
-                Login
-              </Text>
+              <Text style={[styles.title, { color: colors.text }]}>Login</Text>
 
               <Text style={[styles.subtitle, { color: colors.subtext }]}>
-                Digite seus dados
+                Acesse como administrador ou vendedor
               </Text>
 
-              {/* EMAIL */}
               <TextInput
                 placeholder="Digite seu e-mail"
                 placeholderTextColor={colors.subtext}
@@ -144,7 +137,6 @@ export default function Login() {
                 <Text style={styles.erroTexto}>{erroEmail}</Text>
               ) : null}
 
-              {/* SENHA */}
               <TextInput
                 ref={senhaRef}
                 placeholder="Digite sua senha"
@@ -159,11 +151,11 @@ export default function Login() {
                   {
                     backgroundColor: colors.input,
                     color: colors.text,
+                    borderColor: "transparent",
                   },
                 ]}
               />
 
-              {/* BOTÃO */}
               <TouchableOpacity
                 onPress={handleLogin}
                 style={[
@@ -180,22 +172,7 @@ export default function Login() {
                   {loading ? "Entrando..." : "Entrar"}
                 </Text>
               </TouchableOpacity>
-
-              {/* LINKS */}
-              <TouchableOpacity onPress={() => router.push("/recuperar")}>
-                <Text style={[styles.link, { color: colors.text }]}>
-                  Esqueci minha senha
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={() => router.push("/cadastro")}>
-                <Text style={[styles.linkBottom, { color: colors.text }]}>
-                  Criar conta
-                </Text>
-              </TouchableOpacity>
-
             </View>
-
           </View>
         </ImageBackground>
       </ScrollView>
@@ -280,13 +257,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  link: {
-    textAlign: "center",
-    marginBottom: 10,
+  infoBox: {
+    marginTop: 8,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(148,163,184,0.25)",
   },
 
-  linkBottom: {
+  infoTitle: {
+    fontSize: 13,
+    fontWeight: "bold",
+    marginBottom: 6,
     textAlign: "center",
-    marginTop: 10,
+  },
+
+  infoText: {
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 3,
   },
 });

@@ -1,9 +1,12 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+
+import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const { isAdmin } = useAuth();
 
   return (
     <Tabs
@@ -22,8 +25,9 @@ export default function TabLayout() {
           elevation: 10,
         },
 
-        tabBarActiveTintColor: "#DC2626",
-        tabBarInactiveTintColor: colors.subtext || colors.text + "70",
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.subtext,
+
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "500",
@@ -60,13 +64,23 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Nova tela: Clientes */}
       <Tabs.Screen
         name="clientes"
         options={{
           title: "Clientes",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="usuarios"
+        options={{
+          title: "Usuários",
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-add-outline" size={size} color={color} />
           ),
         }}
       />

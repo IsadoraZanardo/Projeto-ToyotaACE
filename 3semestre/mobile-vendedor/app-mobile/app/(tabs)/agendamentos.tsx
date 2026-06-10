@@ -1,301 +1,930 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Modal,
-  TextInput,
-  Alert,
-  Platform,
-  KeyboardAvoidingView,
-} from "react-native";
-import { Calendar } from "react-native-calendars";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useState, useEffect } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Calendar, LocaleConfig } from "react-native-calendars";
+
+import { useTheme } from "@/contexts/ThemeContext";
+import { api, endpoints } from "@/services/api";
+
+LocaleConfig.locales["pt-br"] = {
+  monthNames: [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+  ],
+  monthNamesShort: [
+    "Jan.",
+    "Fev.",
+    "Mar.",
+    "Abr.",
+    "Mai.",
+    "Jun.",
+    "Jul.",
+    "Ago.",
+    "Set.",
+    "Out.",
+    "Nov.",
+    "Dez.",
+  ],
+  dayNames: [
+    "Domingo",
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+  ],
+  dayNamesShort: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+  today: "Hoje",
+};
+
+LocaleConfig.defaultLocale = "pt-br";
+
+type BackendCliente = {
+  id: number;
+  nome: string;
+  email: string;
+  telefone?: string;
+  cpf?: string;
+};
+
+type BackendAgendamento = {
+  id: number;
+  data: string;
+  horario: string;
+  tipoServico: string;
+  observacao?: string;
+  status?: string;
+  cliente?: BackendCliente;
+};
 
 type Client = {
   id: number;
   name: string;
+  email: string;
   phone: string;
 };
+
+type AppointmentType =
+  | "visita"
+  | "ligacao"
+  | "test-drive"
+  | "retirada"
+  | "revisao";
 
 type Appointment = {
   id: number;
   date: string;
   time: string;
   client: string;
+  clientEmail: string;
   clientId?: number;
-  type: "visita" | "ligacao" | "test-drive";
+  type: AppointmentType;
   description: string;
+  status: string;
 };
 
-const typeConfig = {
-  visita: { label: "📍 Visita", color: "#DC2626" },
-  ligacao: { label: "📞 Ligação", color: "#3B82F6" },
-  "test-drive": { label: "🚗 Test Drive", color: "#16A34A" },
+const timeSlots = [
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+];
+
+const typeConfig: Record<
+  AppointmentType,
+  {
+    label: string;
+    backendValue: string;
+    color: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }
+> = {
+  visita: {
+    label: "Visita",
+    backendValue: "VISITA",
+    color: "#DC2626",
+    icon: "location-outline",
+  },
+  ligacao: {
+    label: "Ligação",
+    backendValue: "LIGACAO",
+    color: "#3B82F6",
+    icon: "call-outline",
+  },
+  "test-drive": {
+    label: "Test-drive",
+    backendValue: "TEST_DRIVE",
+    color: "#16A34A",
+    icon: "car-sport-outline",
+  },
+  retirada: {
+    label: "Retirada",
+    backendValue: "RETIRADA",
+    color: "#F59E0B",
+    icon: "key-outline",
+  },
+  revisao: {
+    label: "Revisão",
+    backendValue: "REVISAO",
+    color: "#8B5CF6",
+    icon: "construct-outline",
+  },
 };
+
+function todayISO() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function formatDateBr(date: string) {
+  if (!date) return "";
+
+  const [year, month, day] = date.split("-");
+
+  if (!year || !month || !day) return date;
+
+  return `${day}/${month}/${year}`;
+}
+
+function normalizeTime(time: string) {
+  if (!time) return "";
+
+  return time.slice(0, 5);
+}
+
+function getTypeFromBackend(value?: string): AppointmentType {
+  const normalized = String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace("-", "_");
+
+  if (normalized.includes("LIGACAO") || normalized.includes("LIGAÇÃO")) {
+    return "ligacao";
+  }
+
+  if (normalized.includes("TEST")) {
+    return "test-drive";
+  }
+
+  if (normalized.includes("RETIRADA")) {
+    return "retirada";
+  }
+
+  if (normalized.includes("REVISAO") || normalized.includes("REVISÃO")) {
+    return "revisao";
+  }
+
+  return "visita";
+}
+
+function normalizeClient(cliente: BackendCliente): Client {
+  return {
+    id: cliente.id,
+    name: cliente.nome || "",
+    email: cliente.email || "",
+    phone: cliente.telefone || "",
+  };
+}
+
+function normalizeAppointment(item: BackendAgendamento): Appointment {
+  const type = getTypeFromBackend(item.tipoServico);
+
+  return {
+    id: item.id,
+    date: item.data,
+    time: normalizeTime(item.horario),
+    client: item.cliente?.nome || "Cliente não informado",
+    clientEmail: item.cliente?.email || "",
+    clientId: item.cliente?.id,
+    type,
+    description: item.observacao || "",
+    status: item.status || "AGENDADO",
+  };
+}
 
 export default function Agenda() {
   const { colors, isDark } = useTheme();
 
-  const [selectedDate, setSelectedDate] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [selectedDate, setSelectedDate] = useState(todayISO());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+
   const [modalVisible, setModalVisible] = useState(false);
-
-  const [clients] = useState<Client[]>([
-    { id: 1, name: "Ana Costa", phone: "(41) 95555-1234" },
-    { id: 2, name: "Carlos Santos", phone: "(31) 91234-5678" },
-    { id: 3, name: "João Silva", phone: "(11) 98765-4321" },
-    { id: 4, name: "Maria Oliveira", phone: "(21) 99876-5432" },
-  ].sort((a, b) => a.name.localeCompare(b.name))); // Ordenado A-Z
-
   const [clientSearch, setClientSearch] = useState("");
   const [showClientList, setShowClientList] = useState(false);
 
   const [form, setForm] = useState({
     time: "",
     client: "",
+    clientEmail: "",
     clientId: undefined as number | undefined,
-    type: "visita" as Appointment["type"],
+    type: "visita" as AppointmentType,
     description: "",
   });
 
-  const filteredClients = clients.filter((c) =>
-    c.name.toLowerCase().includes(clientSearch.toLowerCase())
+  useFocusEffect(
+    useCallback(() => {
+      carregarDados();
+    }, [])
   );
 
-  const dayAppointments = appointments
-    .filter((a) => a.date === selectedDate)
-    .sort((a, b) => a.time.localeCompare(b.time));
+  async function carregarDados() {
+    try {
+      setLoading(true);
 
-  const markedDates = appointments.reduce((acc, item) => {
-    acc[item.date] = { marked: true, dotColor: "#DC2626" };
-    return acc;
-  }, {} as any);
+      const [clientesResponse, agendamentosResponse] = await Promise.all([
+        api.get<BackendCliente[]>(endpoints.clientes),
+        api.get<BackendAgendamento[]>(endpoints.agendamentos),
+      ]);
 
-  if (selectedDate) {
-    markedDates[selectedDate] = {
-      ...(markedDates[selectedDate] || {}),
-      selected: true,
-      selectedColor: "#DC2626",
-      selectedTextColor: "#fff",
-    };
+      const clientesNormalizados = clientesResponse
+        .map(normalizeClient)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const agendamentosNormalizados = agendamentosResponse.map(
+        normalizeAppointment
+      );
+
+      setClients(clientesNormalizados);
+      setAppointments(agendamentosNormalizados);
+    } catch (error: any) {
+      Alert.alert(
+        "Erro",
+        error?.message || "Não foi possível carregar os agendamentos."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const selectClient = (client: Client) => {
+  const filteredClients = clients.filter((client) => {
+    const query = clientSearch.toLowerCase();
+
+    return (
+      client.name.toLowerCase().includes(query) ||
+      client.email.toLowerCase().includes(query) ||
+      client.phone.includes(query)
+    );
+  });
+
+  const dayAppointments = appointments
+    .filter((appointment) => appointment.date === selectedDate)
+    .sort((a, b) => a.time.localeCompare(b.time));
+
+  const markedDates = useMemo(() => {
+    const marks = appointments.reduce((acc, item) => {
+      acc[item.date] = {
+        marked: true,
+        dotColor: colors.primary,
+      };
+
+      return acc;
+    }, {} as Record<string, any>);
+
+    if (selectedDate) {
+      marks[selectedDate] = {
+        ...(marks[selectedDate] || {}),
+        selected: true,
+        selectedColor: colors.primary,
+        selectedTextColor: "#fff",
+      };
+    }
+
+    return marks;
+  }, [appointments, selectedDate, colors.primary]);
+
+  function openNewModal() {
+    if (!selectedDate) {
+      setSelectedDate(todayISO());
+    }
+
+    setForm({
+      time: "",
+      client: "",
+      clientEmail: "",
+      clientId: undefined,
+      type: "visita",
+      description: "",
+    });
+
+    setClientSearch("");
+    setShowClientList(false);
+    setModalVisible(true);
+  }
+
+  function selectClient(client: Client) {
     setForm((prev) => ({
       ...prev,
       client: client.name,
+      clientEmail: client.email,
       clientId: client.id,
     }));
+
     setClientSearch("");
     setShowClientList(false);
-  };
+  }
 
-  const handleTimeChange = (text: string) => {
-    let clean = text.replace(/[^0-9]/g, "");
-    if (clean.length > 4) clean = clean.slice(0, 4);
-    if (clean.length >= 3) {
-      clean = clean.slice(0, 2) + ":" + clean.slice(2, 4);
+  async function handleSave() {
+    if (!selectedDate) {
+      Alert.alert("Atenção", "Selecione uma data.");
+      return;
     }
-    setForm((prev) => ({ ...prev, time: clean }));
-  };
 
-  const isValidTime = (time: string): boolean => {
-    if (!time || time.length !== 5) return false;
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
-  };
+    if (!form.time) {
+      Alert.alert("Erro", "Selecione um horário.");
+      return;
+    }
 
-  const handleSave = () => {
-    if (!selectedDate) return Alert.alert("Atenção", "Selecione uma data.");
-    if (!form.time || !isValidTime(form.time)) return Alert.alert("Erro", "Horário inválido!");
-    if (!form.client.trim()) return Alert.alert("Erro", "Nome do cliente é obrigatório.");
+    if (!form.clientId) {
+      Alert.alert("Erro", "Selecione um cliente.");
+      return;
+    }
 
-    const newItem: Appointment = {
-      id: Date.now(),
-      date: selectedDate,
-      time: form.time,
-      client: form.client.trim(),
-      clientId: form.clientId,
-      type: form.type,
-      description: form.description.trim(),
-    };
+    try {
+      setSaving(true);
 
-    setAppointments((prev) => [...prev, newItem]);
-    setModalVisible(false);
-    setForm({ time: "", client: "", clientId: undefined, type: "visita", description: "" });
-  };
+      const payload = {
+        clienteId: form.clientId,
+        data: selectedDate,
+        horario: `${form.time}:00`,
+        tipoServico: typeConfig[form.type].backendValue,
+        observacao: form.description.trim(),
+      };
 
-  const handleDelete = (id: number) => {
-    setAppointments((prev) => prev.filter((a) => a.id !== id));
-  };
+      await api.post<BackendAgendamento>(endpoints.agendamentos, payload);
+
+      Alert.alert("Sucesso", "Agendamento criado com sucesso.");
+
+      setModalVisible(false);
+
+      setForm({
+        time: "",
+        client: "",
+        clientEmail: "",
+        clientId: undefined,
+        type: "visita",
+        description: "",
+      });
+
+      await carregarDados();
+    } catch (error: any) {
+      Alert.alert(
+        "Erro",
+        error?.message || "Não foi possível criar o agendamento."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleDelete(appointment: Appointment) {
+    Alert.alert(
+      "Excluir agendamento",
+      `Deseja realmente excluir o agendamento de ${appointment.client}?`,
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete<void>(
+                endpoints.agendamentoPorId(appointment.id)
+              );
+
+              await carregarDados();
+
+              Alert.alert("Sucesso", "Agendamento excluído com sucesso.");
+            } catch (error: any) {
+              Alert.alert(
+                "Erro",
+                error?.message || "Não foi possível excluir o agendamento."
+              );
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+
+        <Text style={[styles.loadingText, { color: colors.subtext }]}>
+          Carregando agenda...
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Calendário */}
-      <View style={{ backgroundColor: colors.background, paddingTop: 8 }}>
-        <Calendar
-          key={`calendar-${isDark}`}
-          onDayPress={(day) => setSelectedDate(day.dateString)}
-          markedDates={markedDates}
-          theme={{
-            backgroundColor: colors.background,
-            calendarBackground: colors.background,
-            textSectionTitleColor: colors.text,
-            dayTextColor: colors.text,
-            monthTextColor: colors.text,
-            textDisabledColor: isDark ? "#555555" : "#cccccc",
-            todayTextColor: "#DC2626",
-            todayBackgroundColor: isDark ? "#374151" : "#f3f4f6",
-            selectedDayBackgroundColor: "#DC2626",
-            selectedDayTextColor: "#ffffff",
-            arrowColor: "#DC2626",
-            dotColor: "#DC2626",
-          }}
-          style={{
-            backgroundColor: colors.background,
-            marginHorizontal: 8,
-            borderRadius: 12,
-            paddingBottom: 10,
-          }}
-        />
-      </View>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.calendarWrapper}>
+          <Calendar
+            key={`calendar-${isDark}`}
+            current={selectedDate}
+            onDayPress={(day) => setSelectedDate(day.dateString)}
+            markedDates={markedDates}
+            theme={{
+              backgroundColor: colors.background,
+              calendarBackground: colors.card,
+              textSectionTitleColor: colors.subtext,
+              dayTextColor: colors.text,
+              monthTextColor: colors.text,
+              textDisabledColor: isDark ? "#555555" : "#cccccc",
+              todayTextColor: colors.primary,
+              todayBackgroundColor: isDark ? "#27272A" : "#F3F4F6",
+              selectedDayBackgroundColor: colors.primary,
+              selectedDayTextColor: "#ffffff",
+              arrowColor: colors.primary,
+              dotColor: colors.primary,
+              textMonthFontWeight: "bold",
+              textDayFontWeight: "500",
+              textDayHeaderFontWeight: "700",
+            }}
+            style={[
+              styles.calendar,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          />
+        </View>
 
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Agenda</Text>
-        <TouchableOpacity style={[styles.button, { backgroundColor: "#DC2626" }]} onPress={() => setModalVisible(true)}>
-          <Text style={styles.buttonText}>+ Novo</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.title, { color: colors.text }]}>Agenda</Text>
 
-      {/* Lista de Agendamentos */}
-      {dayAppointments.length === 0 ? (
-        <Text style={[styles.empty, { color: colors.text }]}>
-          {selectedDate ? "Nenhum compromisso para esta data" : "Selecione uma data no calendário"}
-        </Text>
-      ) : (
-        <FlatList
-          data={dayAppointments}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ padding: 16, paddingTop: 8 }}
-          renderItem={({ item }) => {
-            const config = typeConfig[item.type];
-            return (
-              <View style={[styles.card, { backgroundColor: colors.card }]}>
-                <View style={styles.row}>
-                  <Text style={[styles.time, { color: colors.text }]}>{item.time}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.client, { color: colors.text }]}>{item.client}</Text>
-                    <Text style={{ color: config.color, fontWeight: "600" }}>{config.label}</Text>
-                    {item.description && <Text style={[styles.desc, { color: colors.text + "80" }]}>{item.description}</Text>}
+            <Text style={[styles.subtitle, { color: colors.subtext }]}>
+              {formatDateBr(selectedDate)} • {dayAppointments.length} compromisso(s)
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary }]}
+            onPress={openNewModal}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.buttonText}>Novo</Text>
+          </TouchableOpacity>
+        </View>
+
+        {dayAppointments.length === 0 ? (
+          <View
+            style={[
+              styles.emptyBox,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={34}
+              color={colors.subtext}
+            />
+
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              Nenhum compromisso
+            </Text>
+
+            <Text style={[styles.emptyText, { color: colors.subtext }]}>
+              Não há agendamentos para esta data.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={dayAppointments}
+            keyExtractor={(item) => String(item.id)}
+            scrollEnabled={false}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => {
+              const config = typeConfig[item.type];
+
+              return (
+                <View
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <View style={styles.timeBox}>
+                    <Text style={[styles.time, { color: colors.text }]}>
+                      {item.time}
+                    </Text>
+
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: config.color },
+                      ]}
+                    />
                   </View>
-                  <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                    <Text style={{ color: "#EF4444" }}>Excluir</Text>
+
+                  <View style={styles.cardContent}>
+                    <Text style={[styles.client, { color: colors.text }]}>
+                      {item.client}
+                    </Text>
+
+                    {item.clientEmail ? (
+                      <Text
+                        style={[styles.clientEmail, { color: colors.subtext }]}
+                      >
+                        {item.clientEmail}
+                      </Text>
+                    ) : null}
+
+                    <View style={styles.typeRow}>
+                      <Ionicons
+                        name={config.icon}
+                        size={16}
+                        color={config.color}
+                      />
+
+                      <Text style={[styles.typeText, { color: config.color }]}>
+                        {config.label}
+                      </Text>
+                    </View>
+
+                    {item.description ? (
+                      <Text style={[styles.desc, { color: colors.subtext }]}>
+                        {item.description}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.deleteButton,
+                      { backgroundColor: "rgba(239,68,68,0.12)" },
+                    ]}
+                    onPress={() => handleDelete(item)}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={18}
+                      color={colors.danger}
+                    />
                   </TouchableOpacity>
                 </View>
-              </View>
-            );
-          }}
-        />
-      )}
+              );
+            }}
+          />
+        )}
+      </ScrollView>
 
-      {/* ==================== MODAL PRINCIPAL ==================== */}
       <Modal visible={modalVisible} animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-          <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Novo Agendamento</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <SafeAreaView
+            style={[
+              styles.modalContainer,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.modalHeader,
+                { borderBottomColor: colors.border },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  Novo agendamento
+                </Text>
 
-            <TextInput
-              placeholder="Horário (HH:MM)"
-              placeholderTextColor={colors.text + "70"}
-              style={[styles.input, { color: colors.text, borderColor: colors.text + "30", backgroundColor: colors.card }]}
-              value={form.time}
-              onChangeText={handleTimeChange}
-              keyboardType="numeric"
-              maxLength={5}
-            />
-
-            {/* === CAMPO DE CLIENTE COM PESQUISA DIRETA === */}
-            <TextInput
-              placeholder="Buscar cliente..."
-              placeholderTextColor={colors.text + "70"}
-              style={[styles.input, { color: colors.text, borderColor: colors.text + "30", backgroundColor: colors.card }]}
-              value={clientSearch}
-              onChangeText={setClientSearch}
-              onFocus={() => setShowClientList(true)}
-            />
-
-            {/* Lista de clientes filtrados */}
-            {showClientList && (
-              <View style={{ maxHeight: 250, marginBottom: 12 }}>
-                <FlatList
-                  data={filteredClients}
-                  keyExtractor={(item) => item.id.toString()}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[styles.clientItem, { backgroundColor: colors.card }]}
-                      onPress={() => selectClient(item)}
-                    >
-                      <Text style={[styles.clientName, { color: colors.text }]}>{item.name}</Text>
-                      <Text style={{ color: colors.text + "70" }}>{item.phone}</Text>
-                    </TouchableOpacity>
-                  )}
-                  ListEmptyComponent={
-                    <Text style={{ textAlign: "center", padding: 20, color: colors.text + "60" }}>
-                      Nenhum cliente encontrado
-                    </Text>
-                  }
-                />
+                <Text style={[styles.modalSubtitle, { color: colors.subtext }]}>
+                  Data selecionada: {formatDateBr(selectedDate)}
+                </Text>
               </View>
-            )}
 
-            {/* Nome do cliente selecionado */}
-            {form.client ? (
-              <Text style={{ color: colors.text, marginBottom: 12, fontWeight: "600" }}>
-                Selecionado: {form.client}
-              </Text>
-            ) : null}
-
-            {/* Tipo de Agendamento */}
-            <View style={styles.typeContainer}>
-              {Object.entries(typeConfig).map(([key, value]) => {
-                const isActive = form.type === key;
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    style={[styles.typeButton, { borderColor: value.color, backgroundColor: isActive ? value.color : "transparent" }]}
-                    onPress={() => setForm((prev) => ({ ...prev, type: key as Appointment["type"] }))}
-                  >
-                    <Text style={{ color: isActive ? "#fff" : value.color, fontWeight: "600" }}>
-                      {value.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <TextInput
-              placeholder="Descrição (opcional)"
-              placeholderTextColor={colors.text + "70"}
-              style={[styles.input, { height: 80, textAlignVertical: "top", color: colors.text, borderColor: colors.text + "30", backgroundColor: colors.card }]}
-              multiline
-              value={form.description}
-              onChangeText={(t) => setForm({ ...form, description: t })}
-            />
-
-            <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Text style={{ color: colors.text, fontSize: 17 }}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSave}>
-                <Text style={{ color: "#DC2626", fontSize: 17, fontWeight: "bold" }}>Salvar</Text>
+                <Ionicons
+                  name="close-outline"
+                  size={28}
+                  color={colors.subtext}
+                />
               </TouchableOpacity>
             </View>
-          </View>
+
+            <ScrollView contentContainerStyle={styles.modalContent}>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Horário
+              </Text>
+
+              <View style={styles.timeSlots}>
+                {timeSlots.map((time) => {
+                  const active = form.time === time;
+
+                  return (
+                    <TouchableOpacity
+                      key={time}
+                      style={[
+                        styles.timeChip,
+                        {
+                          backgroundColor: active
+                            ? colors.primary
+                            : colors.card,
+                          borderColor: active ? colors.primary : colors.border,
+                        },
+                      ]}
+                      onPress={() => setForm((prev) => ({ ...prev, time }))}
+                    >
+                      <Text
+                        style={[
+                          styles.timeChipText,
+                          { color: active ? "#fff" : colors.text },
+                        ]}
+                      >
+                        {time}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.label, { color: colors.text }]}>
+                Cliente
+              </Text>
+
+              <TextInput
+                placeholder="Buscar cliente..."
+                placeholderTextColor={colors.subtext}
+                style={[
+                  styles.input,
+                  {
+                    color: colors.text,
+                    borderColor: colors.border,
+                    backgroundColor: colors.input,
+                  },
+                ]}
+                value={clientSearch}
+                onChangeText={(text) => {
+                  setClientSearch(text);
+                  setShowClientList(true);
+                }}
+                onFocus={() => setShowClientList(true)}
+              />
+
+              {showClientList ? (
+                <View
+                  style={[
+                    styles.clientList,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <FlatList
+                    data={filteredClients}
+                    keyExtractor={(item) => String(item.id)}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.clientItem,
+                          { borderBottomColor: colors.border },
+                        ]}
+                        onPress={() => selectClient(item)}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              styles.clientItemName,
+                              { color: colors.text },
+                            ]}
+                          >
+                            {item.name}
+                          </Text>
+
+                          <Text
+                            style={[
+                              styles.clientItemInfo,
+                              { color: colors.subtext },
+                            ]}
+                          >
+                            {item.email || item.phone || "Sem contato"}
+                          </Text>
+                        </View>
+
+                        <Ionicons
+                          name="chevron-forward-outline"
+                          size={18}
+                          color={colors.subtext}
+                        />
+                      </TouchableOpacity>
+                    )}
+                    ListEmptyComponent={
+                      <Text
+                        style={[
+                          styles.emptyClientText,
+                          { color: colors.subtext },
+                        ]}
+                      >
+                        Nenhum cliente encontrado.
+                      </Text>
+                    }
+                  />
+                </View>
+              ) : null}
+
+              {form.client ? (
+                <View
+                  style={[
+                    styles.selectedClientBox,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={22}
+                    color={colors.primary}
+                  />
+
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[styles.selectedClientName, { color: colors.text }]}
+                    >
+                      {form.client}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.selectedClientEmail,
+                        { color: colors.subtext },
+                      ]}
+                    >
+                      {form.clientEmail}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              <Text style={[styles.label, { color: colors.text }]}>
+                Tipo de agendamento
+              </Text>
+
+              <View style={styles.typeContainer}>
+                {Object.entries(typeConfig).map(([key, value]) => {
+                  const isActive = form.type === key;
+
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[
+                        styles.typeButton,
+                        {
+                          borderColor: isActive ? value.color : colors.border,
+                          backgroundColor: isActive
+                            ? value.color
+                            : colors.card,
+                        },
+                      ]}
+                      onPress={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          type: key as AppointmentType,
+                        }))
+                      }
+                    >
+                      <Ionicons
+                        name={value.icon}
+                        size={16}
+                        color={isActive ? "#fff" : value.color}
+                      />
+
+                      <Text
+                        style={[
+                          styles.typeButtonText,
+                          { color: isActive ? "#fff" : value.color },
+                        ]}
+                      >
+                        {value.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.label, { color: colors.text }]}>
+                Observação
+              </Text>
+
+              <TextInput
+                placeholder="Descrição ou observação do agendamento"
+                placeholderTextColor={colors.subtext}
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  {
+                    color: colors.text,
+                    borderColor: colors.border,
+                    backgroundColor: colors.input,
+                  },
+                ]}
+                multiline
+                value={form.description}
+                onChangeText={(text) =>
+                  setForm({ ...form, description: text })
+                }
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.cancelButton,
+                    { borderColor: colors.border },
+                  ]}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={[styles.cancelButtonText, { color: colors.text }]}>
+                    Cancelar
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.saveButton,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: saving ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="checkmark-circle-outline"
+                        size={19}
+                        color="#fff"
+                      />
+                      <Text style={styles.saveButtonText}>Salvar</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
@@ -303,53 +932,335 @@ export default function Agenda() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+  },
+
+  calendarWrapper: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+  },
+
+  calendar: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingBottom: 8,
+    overflow: "hidden",
+  },
+
   header: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 12,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    alignItems: "flex-start",
+    gap: 12,
   },
-  title: { fontSize: 22, fontWeight: "bold" },
-  button: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  buttonText: { color: "#fff", fontWeight: "600" },
-  empty: { textAlign: "center", marginTop: 50, fontSize: 16 },
 
-  card: { padding: 16, borderRadius: 12, marginBottom: 12 },
-  row: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
-  time: { width: 60, fontWeight: "bold", fontSize: 17 },
-  client: { fontWeight: "600", fontSize: 16.5 },
-  desc: { fontSize: 13.5, marginTop: 6 },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+  },
 
-  modalContainer: { flex: 1, padding: 20, paddingTop: Platform.OS === "ios" ? 60 : 40 },
-  modalTitle: { fontSize: 22, marginBottom: 20, fontWeight: "bold" },
+  subtitle: {
+    marginTop: 4,
+    fontSize: 13,
+  },
+
+  button: {
+    paddingHorizontal: 14,
+    minHeight: 42,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+
+  list: {
+    paddingHorizontal: 20,
+    paddingBottom: 120,
+  },
+
+  emptyBox: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 120,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 28,
+    alignItems: "center",
+  },
+
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "bold",
+    marginTop: 10,
+  },
+
+  emptyText: {
+    marginTop: 4,
+    fontSize: 13,
+    textAlign: "center",
+  },
+
+  card: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+  },
+
+  timeBox: {
+    width: 58,
+    alignItems: "center",
+  },
+
+  time: {
+    fontWeight: "bold",
+    fontSize: 17,
+  },
+
+  statusDot: {
+    marginTop: 8,
+    width: 9,
+    height: 9,
+    borderRadius: 99,
+  },
+
+  cardContent: {
+    flex: 1,
+  },
+
+  client: {
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  clientEmail: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  typeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 7,
+  },
+
+  typeText: {
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+
+  desc: {
+    fontSize: 13,
+    marginTop: 7,
+    lineHeight: 18,
+  },
+
+  deleteButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  modalContainer: {
+    flex: 1,
+  },
+
+  modalHeader: {
+    padding: 18,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+  },
+
+  modalSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+
+  modalContent: {
+    padding: 20,
+    paddingBottom: 120,
+  },
+
+  label: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginBottom: 8,
+    marginTop: 12,
+  },
+
+  timeSlots: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+
+  timeChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 15,
+    paddingVertical: 9,
+  },
+
+  timeChipText: {
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+
   input: {
     borderWidth: 1,
-    padding: 14,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    minHeight: 48,
+    borderRadius: 12,
     marginBottom: 12,
-    fontSize: 16,
+    fontSize: 15,
   },
-  typeContainer: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  typeButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: "center",
+
+  textArea: {
+    minHeight: 90,
+    paddingTop: 14,
+    textAlignVertical: "top",
   },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
+
+  clientList: {
+    borderWidth: 1,
+    borderRadius: 14,
+    maxHeight: 240,
+    marginBottom: 12,
+    overflow: "hidden",
   },
+
   clientItem: {
     padding: 14,
-    marginVertical: 4,
-    borderRadius: 10,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  clientName: {
-    fontSize: 16,
-    fontWeight: "600",
+
+  clientItemName: {
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+
+  clientItemInfo: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  emptyClientText: {
+    textAlign: "center",
+    padding: 20,
+    fontSize: 13,
+  },
+
+  selectedClientBox: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+
+  selectedClientName: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+
+  selectedClientEmail: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  typeContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 9,
+    marginBottom: 10,
+  },
+
+  typeButton: {
+    borderWidth: 1.5,
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  typeButtonText: {
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 20,
+  },
+
+  cancelButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    minHeight: 46,
+    paddingHorizontal: 18,
+    justifyContent: "center",
+  },
+
+  cancelButtonText: {
+    fontWeight: "bold",
+  },
+
+  saveButton: {
+    borderRadius: 12,
+    minHeight: 46,
+    paddingHorizontal: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 7,
+  },
+
+  saveButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

@@ -6,134 +6,74 @@ import {
   type ClientStatus,
 } from "@/lib/mock-data";
 
-/* =========================
-   TYPES
-========================= */
+import { api, UsuarioInterno } from "@/services/api";
 
 export type ClientVehicleConfig = {
   vehicleId: number;
-
   vehicleName: string;
-
   version: string;
-
   color: string;
-
   seatMaterial: string;
-
   accessories: string[];
-
   totalPrice: number;
 };
 
 export type Client = {
   id: number;
-
   name: string;
-
   phone: string;
-
   status: ClientStatus;
-
   vehicle: string;
-
   lastContact: string;
-
   selectedVehicleConfig?: ClientVehicleConfig;
 };
 
 export type Appointment = {
   id: number;
-
   time: string;
-
   client: string;
-
   type: "visita" | "ligacao" | "test-drive";
-
   description: string;
-
   date: string;
 };
 
 type AppState = {
   isLoggedIn: boolean;
-
   userName: string;
-
   selectedBranch: string | null;
+  user: UsuarioInterno | null;
+  isAdmin: boolean;
 
   clients: Client[];
-
   appointments: Appointment[];
 
   selectedClientId: number | null;
+  setSelectedClientId: (id: number | null) => void;
 
-  setSelectedClientId: (
-    id: number | null
-  ) => void;
-
-  login: (
-    email: string,
-    password: string
-  ) => boolean;
-
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 
-  selectBranch: (
-    name: string
-  ) => void;
+  selectBranch: (name: string) => void;
 
-  addClient: (
-    client: Omit<Client, "id">
-  ) => void;
+  addClient: (client: Omit<Client, "id">) => void;
+  updateClient: (id: number, data: Partial<Client>) => void;
+  deleteClient: (id: number) => void;
 
-  updateClient: (
-    id: number,
-    data: Partial<Client>
-  ) => void;
-
-  deleteClient: (
-    id: number
-  ) => void;
-
-  addAppointment: (
-    appointment: Omit<
-      Appointment,
-      "id"
-    >
-  ) => void;
-
-  deleteAppointment: (
-    id: number
-  ) => void;
+  addAppointment: (appointment: Omit<Appointment, "id">) => void;
+  deleteAppointment: (id: number) => void;
 };
 
-/* =========================
-   CONTEXT
-========================= */
-
-const AppContext =
-  createContext<AppState | null>(
-    null
-  );
+const AppContext = createContext<AppState | null>(null);
 
 export function useAppContext() {
-  const ctx =
-    useContext(AppContext);
+  const ctx = useContext(AppContext);
 
   if (!ctx) {
-    throw new Error(
-      "useAppContext must be inside AppProvider"
-    );
+    throw new Error("useAppContext must be inside AppProvider");
   }
 
   return ctx;
 }
-
-/* =========================
-   HELPERS
-========================= */
 
 const enrichAppointments = (
   appts: typeof initialAppointments
@@ -143,110 +83,82 @@ const enrichAppointments = (
     date: "2026-03-21",
   }));
 
-/* =========================
-   PROVIDER
-========================= */
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<UsuarioInterno | null>(() => {
+    const saved = localStorage.getItem("toyota-vendedor-user");
+    return saved ? JSON.parse(saved) : null;
+  });
 
-export function AppProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const [isLoggedIn, setIsLoggedIn] =
-    useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return !!localStorage.getItem("toyota-vendedor-user");
+  });
 
-  const [userName, setUserName] =
-    useState("");
+  const [userName, setUserName] = useState(() => {
+    const saved = localStorage.getItem("toyota-vendedor-user");
 
-  const [
-    selectedBranch,
-    setSelectedBranch,
-  ] = useState<string | null>(
-    null
+    if (!saved) return "";
+
+    try {
+      const parsed: UsuarioInterno = JSON.parse(saved);
+      return parsed.nome || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(() => {
+    return localStorage.getItem("toyota-vendedor-branch");
+  });
+
+  const [clients, setClients] = useState<Client[]>(initialClients);
+
+  const [appointments, setAppointments] = useState<Appointment[]>(
+    enrichAppointments(initialAppointments)
   );
 
-  const [clients, setClients] =
-    useState<Client[]>(
-      initialClients
-    );
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
 
-  const [
-    appointments,
-    setAppointments,
-  ] = useState<
-    Appointment[]
-  >(
-    enrichAppointments(
-      initialAppointments
-    )
-  );
+  const isAdmin = user?.perfil === "ADMIN";
 
-  /* =========================
-     CLIENTE SELECIONADO
-  ========================= */
-
-  const [
-    selectedClientId,
-    setSelectedClientId,
-  ] = useState<number | null>(
-    null
-  );
-
-  /* =========================
-     LOGIN
-  ========================= */
-
-  const login = (
-    email: string,
-    password: string
-  ) => {
-    if (!email || !password)
-      return false;
-
-    const name = email
-      .split("@")[0]
-      .replace(
-        /[^a-zA-Z]/g,
-        " "
-      )
-      .replace(
-        /\b\w/g,
-        (c) =>
-          c.toUpperCase()
+  const login = async (email: string, password: string) => {
+    try {
+      const usuario = await api.loginUsuario(
+        email.trim().toLowerCase(),
+        password
       );
 
-    setUserName(name);
+      if (!usuario.ativo) {
+        return false;
+      }
 
-    setIsLoggedIn(true);
+      setUser(usuario);
+      setUserName(usuario.nome);
+      setIsLoggedIn(true);
 
-    return true;
+      localStorage.setItem("toyota-vendedor-user", JSON.stringify(usuario));
+
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const logout = () => {
+    setUser(null);
     setIsLoggedIn(false);
-
     setUserName("");
-
     setSelectedBranch(null);
+
+    localStorage.removeItem("toyota-vendedor-user");
+    localStorage.removeItem("toyota-vendedor-branch");
   };
 
-  /* =========================
-     BRANCH
-  ========================= */
-
-  const selectBranch = (
-    name: string
-  ) => {
+  const selectBranch = (name: string) => {
     setSelectedBranch(name);
+    localStorage.setItem("toyota-vendedor-branch", name);
   };
 
-  /* =========================
-     CLIENTS
-  ========================= */
-
-  const addClient = (
-    client: Omit<Client, "id">
-  ) => {
+  const addClient = (client: Omit<Client, "id">) => {
     setClients((prev) => [
       ...prev,
       {
@@ -256,10 +168,7 @@ export function AppProvider({
     ]);
   };
 
-  const updateClient = (
-    id: number,
-    data: Partial<Client>
-  ) => {
+  const updateClient = (id: number, data: Partial<Client>) => {
     setClients((prev) =>
       prev.map((c) =>
         c.id === id
@@ -272,26 +181,11 @@ export function AppProvider({
     );
   };
 
-  const deleteClient = (
-    id: number
-  ) => {
-    setClients((prev) =>
-      prev.filter(
-        (c) => c.id !== id
-      )
-    );
+  const deleteClient = (id: number) => {
+    setClients((prev) => prev.filter((c) => c.id !== id));
   };
 
-  /* =========================
-     APPOINTMENTS
-  ========================= */
-
-  const addAppointment = (
-    appointment: Omit<
-      Appointment,
-      "id"
-    >
-  ) => {
+  const addAppointment = (appointment: Omit<Appointment, "id">) => {
     setAppointments((prev) => [
       ...prev,
       {
@@ -301,51 +195,35 @@ export function AppProvider({
     ]);
   };
 
-  const deleteAppointment = (
-    id: number
-  ) => {
-    setAppointments((prev) =>
-      prev.filter(
-        (a) => a.id !== id
-      )
-    );
+  const deleteAppointment = (id: number) => {
+    setAppointments((prev) => prev.filter((a) => a.id !== id));
   };
-
-  /* =========================
-     PROVIDER
-  ========================= */
 
   return (
     <AppContext.Provider
       value={{
         isLoggedIn,
-
         userName,
-
         selectedBranch,
+        user,
+        isAdmin,
 
         clients,
-
         appointments,
 
         selectedClientId,
-
         setSelectedClientId,
 
         login,
-
         logout,
 
         selectBranch,
 
         addClient,
-
         updateClient,
-
         deleteClient,
 
         addAppointment,
-
         deleteAppointment,
       }}
     >

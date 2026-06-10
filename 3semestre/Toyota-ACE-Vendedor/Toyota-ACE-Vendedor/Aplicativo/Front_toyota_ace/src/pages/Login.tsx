@@ -9,13 +9,14 @@ import { toast } from "sonner";
 import logoT from "@/assets/logoT.png";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("adm@toyota.com");
+  const [password, setPassword] = useState("123456");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const { login } = useAppContext();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email || !password) {
@@ -23,13 +24,21 @@ const Login = () => {
       return;
     }
 
-    const success = login(email, password);
+    try {
+      setLoading(true);
 
-    if (success) {
-      toast.success("Login realizado com sucesso!");
-      navigate("/filial");
-    } else {
-      toast.error("E-mail ou senha inválidos");
+      const success = await login(email, password);
+
+      if (success) {
+        toast.success("Login realizado com sucesso!");
+        navigate("/filial");
+      } else {
+        toast.error("E-mail ou senha inválidos");
+      }
+    } catch {
+      toast.error("Não foi possível conectar ao servidor");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,9 +60,7 @@ const Login = () => {
 
           <h1 className="text-2xl font-bold text-white">ACE Vendedor</h1>
 
-          <p className="text-sm text-white/90">
-            Toyota Sales System
-          </p>
+          <p className="text-sm text-white/90">Toyota Sales System</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -87,28 +94,11 @@ const Login = () => {
             />
           </div>
 
-          <Button type="submit" className="w-full">
-            Entrar
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
           </Button>
 
-          <p className="text-center text-sm">
-            <Link
-              to="/recuperar"
-              className="text-white hover:underline text-xs"
-            >
-              Esqueceu a senha?
-            </Link>
-          </p>
-
-          <p className="text-center text-white text-sm">
-            Não tem conta?{" "}
-            <Link
-              to="/cadastro"
-              className="text-primary hover:underline font-medium"
-            >
-              Criar conta
-            </Link>
-          </p>
+          
         </form>
       </div>
     </div>

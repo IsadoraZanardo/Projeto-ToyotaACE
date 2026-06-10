@@ -1,4 +1,4 @@
-export const API_URL = "http://loaclhost:8083/api";
+export const API_URL = "http://localhost:8083/api";
 
 export type LoginRequest = {
   email: string;

@@ -26,7 +26,11 @@ import { toast } from "sonner";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8083/api";
 
-type AppointmentType = "visita" | "ligacao" | "test-drive";
+type AppointmentType = | "visita"
+  | "ligacao"
+  | "test-drive"
+  | "retirada"
+  | "revisao";
 
 type Appointment = {
   id: number;
@@ -55,7 +59,18 @@ const typeConfig = {
     icon: Car,
     className: "bg-success/15 text-green-400",
   },
+  "retirada": {
+    label: "Test Drive",
+    icon: Car,
+    className: "bg-success/15 text-green-400",
+  },
+  "revisao": {
+    label: "Test Drive",
+    icon: Car,
+    className: "bg-success/15 text-green-400",
+  },
 };
+
 
 const mapTipoServico = (tipoServico?: string): AppointmentType => {
   const tipo = (tipoServico || "").toLowerCase();
@@ -338,6 +353,8 @@ const Schedule = () => {
                   <SelectItem value="visita">Visita</SelectItem>
                   <SelectItem value="ligacao">Ligação</SelectItem>
                   <SelectItem value="test-drive">Test Drive</SelectItem>
+                  <SelectItem value="test-drive">retirada</SelectItem>
+                  <SelectItem value="test-drive">revisao</SelectItem>
                 </SelectContent>
               </Select>
             </div>

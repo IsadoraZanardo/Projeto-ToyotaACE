@@ -7,11 +7,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { AppProvider } from "@/contexts/AppContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
-
-
-
 import Login from "./pages/Login";
-import Cadastro from "./pages/Cadastro";
 import RecuperarSenha from "./pages/RecuperarSenha";
 
 import BranchSelect from "./pages/BranchSelect";
@@ -19,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import Vehicles from "./pages/Vehicles";
 import Clients from "./pages/Clients";
 import Schedule from "./pages/Schedule";
+import Usuarios from "./pages/Usuarios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,29 +26,24 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+
         <AppProvider>
           <BrowserRouter>
             <Routes>
-
-              {/* ROTAS PÚBLICAS */}
               <Route path="/" element={<Login />} />
-              <Route path="/cadastro" element={<Cadastro />} />
               <Route path="/recuperar" element={<RecuperarSenha />} />
 
-              {/* FLUXO APÓS LOGIN */}
               <Route path="/filial" element={<BranchSelect />} />
 
-              {/* ROTAS COM LAYOUT */}
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/veiculos" element={<Vehicles />} />
                 <Route path="/clientes" element={<Clients />} />
                 <Route path="/agenda" element={<Schedule />} />
+                <Route path="/usuarios" element={<Usuarios />} />
               </Route>
 
-              {/* 404 */}
               <Route path="*" element={<NotFound />} />
-
             </Routes>
           </BrowserRouter>
         </AppProvider>
