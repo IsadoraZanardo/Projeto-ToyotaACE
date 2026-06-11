@@ -10,7 +10,7 @@ import paho.mqtt.client as mqtt
 BROKER = "host.docker.internal"
 PORT = 1883
 TOPIC = "toyota/veiculo/status"
-QTD_CARROS = 1
+QTD_CARROS = 150
 
 ETAPAS = [
     "Pedido Realizado",

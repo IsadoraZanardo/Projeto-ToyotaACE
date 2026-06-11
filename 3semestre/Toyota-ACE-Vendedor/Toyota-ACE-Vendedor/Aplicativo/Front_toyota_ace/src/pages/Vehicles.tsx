@@ -120,9 +120,7 @@ const Vehicles = () => {
     statusGarantia: "ATIVA",
     dataProximaRevisao: "2026-12-20",
     statusVeiculo: "Pedido realizado",
-    progressoVeiculo: "25",
-    placaVeiculo: "",
-    vinIot: "",
+    progressoVeiculo: "25"
   });
 
   const [loading, setLoading] = useState(false);
@@ -240,7 +238,6 @@ const Vehicles = () => {
         marcaVeiculo: "Toyota",
         anoVeiculo: String(selectedVehicle.year || "2026"),
         corVeiculo: selectedColorLabel,
-        placaVeiculo: finance.placaVeiculo,
         motorVeiculo:
           selectedType === "hibrido"
             ? "Motor híbrido Toyota"
@@ -265,7 +262,7 @@ const Vehicles = () => {
         dataProximaRevisao: finance.dataProximaRevisao,
 
         acessorios: acessoriosSelecionados,
-        vinIot: finance.vinIot,
+        
       });
 
       toast.success("Novo veículo cadastrado para o cliente!");

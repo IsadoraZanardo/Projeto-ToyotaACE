@@ -26,7 +26,6 @@ type BackendVeiculo = {
   marcaVeiculo?: string;
   anoVeiculo?: string;
   corVeiculo?: string;
-  placaVeiculo?: string;
   chassiVeiculo?: string;
   motorVeiculo?: string;
   combustivelVeiculo?: string;
@@ -70,7 +69,6 @@ type Vehicle = {
   combustivel: string;
   cambio: string;
   chassi: string;
-  placa: string;
 
   valorTotal: string;
   entrada: string;
@@ -157,7 +155,6 @@ function normalizeVehicle(vehicle: BackendVeiculo): Vehicle {
     combustivel: vehicle.combustivelVeiculo || "",
     cambio: vehicle.cambioVeiculo || "",
     chassi: vehicle.chassiVeiculo || "",
-    placa: vehicle.placaVeiculo || "",
 
     valorTotal: toText(vehicle.valorTotal),
     entrada: toText(vehicle.valorEntrada),
@@ -234,7 +231,6 @@ export default function Clientes() {
     combustivel: "",
     cambio: "",
     chassi: "",
-    placa: "",
 
     valorTotal: "",
     entrada: "",
@@ -446,7 +442,6 @@ export default function Clientes() {
       combustivel: vehicle.combustivel,
       cambio: vehicle.cambio,
       chassi: vehicle.chassi,
-      placa: vehicle.placa,
 
       valorTotal: vehicle.valorTotal,
       entrada: vehicle.entrada,
@@ -491,7 +486,6 @@ export default function Clientes() {
         marcaVeiculo: vehicleForm.marca,
         anoVeiculo: vehicleForm.ano,
         corVeiculo: vehicleForm.cor,
-        placaVeiculo: vehicleForm.placa,
         chassiVeiculo: vehicleForm.chassi,
         motorVeiculo: vehicleForm.motor,
         combustivelVeiculo: vehicleForm.combustivel,
@@ -1016,15 +1010,7 @@ export default function Clientes() {
                 }
               />
 
-              <EditInput
-                label="Placa"
-                value={vehicleForm.placa}
-                colors={colors}
-                wide={isWideForm}
-                onChangeText={(text) =>
-                  setVehicleForm({ ...vehicleForm, placa: text })
-                }
-              />
+              
 
               <EditInput
                 label="Chassi"
@@ -1205,16 +1191,6 @@ export default function Clientes() {
                 wide={isWideForm}
                 onChangeText={(text) =>
                   setVehicleForm({ ...vehicleForm, proximaRevisao: text })
-                }
-              />
-
-              <EditInput
-                label="VIN IoT"
-                value={vehicleForm.vinIot}
-                colors={colors}
-                wide={isWideForm}
-                onChangeText={(text) =>
-                  setVehicleForm({ ...vehicleForm, vinIot: text })
                 }
               />
             </View>

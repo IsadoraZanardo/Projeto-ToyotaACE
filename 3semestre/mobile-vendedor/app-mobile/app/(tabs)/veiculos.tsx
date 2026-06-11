@@ -409,7 +409,6 @@ export default function Veiculos() {
         marcaVeiculo: selectedVehicle.brand,
         anoVeiculo: selectedVehicle.year,
         corVeiculo: selectedColor,
-        placaVeiculo: "",
         chassiVeiculo: gerarChassi(),
         motorVeiculo: selectedVehicle.motor,
         combustivelVeiculo: selectedVehicle.fuel,
