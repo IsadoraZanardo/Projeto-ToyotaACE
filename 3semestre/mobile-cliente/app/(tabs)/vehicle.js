@@ -13,7 +13,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
-const API_ORIGIN = "http://localhost:8083";
+const API_ORIGIN = "https://le42wmnr99.execute-api.us-east-1.amazonaws.com/prod";
 const API_URL = `${API_ORIGIN}/api`;
 
 const timelineSteps = [

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://localhost:8083/api";
+const API_URL = "https://le42wmnr99.execute-api.us-east-1.amazonaws.com/prod/api";
 
 type User = {
   id: number;

@@ -14,7 +14,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 import logoT from "../assets/logoT.png";
 
-const API_URL = "http://localhost:8083/api";
+const API_URL = "https://le42wmnr99.execute-api.us-east-1.amazonaws.com/prod/api";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");

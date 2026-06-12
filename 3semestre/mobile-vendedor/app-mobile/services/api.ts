@@ -1,11 +1,10 @@
-const API_BASE_URL = "http://localhost:8083/api";
-
+const API_BASE_URL =
+  "https://le42wmnr99.execute-api.us-east-1.amazonaws.com/prod/api";
 /*
   IMPORTANTE:
 
   Se estiver rodando no Expo Web ou emulador que acessa o localhost,
   pode manter:
-  http://localhost:8083/api
 
   Se estiver rodando no celular físico pelo Expo Go,
   troque localhost pelo IP da sua máquina na mesma rede.
