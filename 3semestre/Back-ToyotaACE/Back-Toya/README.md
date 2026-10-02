@@ -8,7 +8,7 @@ Backend Spring Boot para o projeto Toyota ACE Cliente.
 docker compose up --build
 ```
 
-Backend: http://localhost:8081
+Backend: http://localhost:8083
 PostgreSQL: localhost:5433
 
 ## Rodar localmente
@@ -29,6 +29,14 @@ Depois rode:
 
 - Email: nastrisalesisabelle@gmail.com
 - Senha: 123456
+
+## Login do vendedor
+
+- E-mail: `vendedor@toyota.com`
+- Senha: `123456`
+- Endpoint: `POST http://localhost:8083/api/usuarios/login`
+
+O usuário padrão é criado quando o backend inicia, se ainda não existir no banco.
 
 ## Rotas principais
 
