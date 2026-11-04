@@ -1,0 +1,557 @@
+import { useCallback, useEffect, useState } from "react";
+import { useAppContext } from "@/contexts/AppContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Car,
+  CheckCircle2,
+  MapPin,
+  Phone,
+  Plus,
+  Trash2,
+  Wrench,
+} from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+const API_URL = import.meta.env.VITE_API_URL || "https://le42wmnr99.execute-api.us-east-1.amazonaws.com/prod/api";
+const TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
+
+type AppointmentType =
+  | "visita"
+  | "ligacao"
+  | "test-drive"
+  | "retirada"
+  | "revisao"
+  | "recall"
+  | "outros";
+
+type Appointment = {
+  id: number;
+  date: string;
+  time: string;
+  client: string;
+  clientId?: number;
+  type: AppointmentType;
+  description: string;
+};
+
+type AppointmentApiResponse = {
+  id: number;
+  data: string;
+  horario?: string;
+  cliente?: {
+    id?: number;
+    nome?: string;
+  };
+  tipoServico?: string;
+  observacao?: string;
+};
+
+const typeConfig = {
+  visita: {
+    label: "Visita",
+    icon: MapPin,
+    className: "bg-primary/15 text-primary",
+  },
+  ligacao: {
+    label: "Ligação",
+    icon: Phone,
+    className: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  },
+  "test-drive": {
+    label: "Test Drive",
+    icon: Car,
+    className: "bg-success/15 text-success",
+  },
+  retirada: {
+    label: "Retirada",
+    icon: CheckCircle2,
+    className: "bg-success/15 text-success",
+  },
+  revisao: {
+    label: "Revisão",
+    icon: Wrench,
+    className: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  },
+  recall: {
+    label: "Recall",
+    icon: AlertTriangle,
+    className: "bg-warning/15 text-amber-700 dark:text-amber-300",
+  },
+  outros: {
+    label: "Outros",
+    icon: CalendarDays,
+    className: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
+  },
+};
+
+const isAppointmentType = (value: string): value is AppointmentType =>
+  Object.prototype.hasOwnProperty.call(typeConfig, value);
+
+const mapTipoServico = (tipoServico?: string): AppointmentType => {
+  const tipo = (tipoServico || "").toLowerCase();
+
+  if (tipo.includes("revis")) return "revisao";
+  if (tipo.includes("retirada")) return "retirada";
+  if (tipo.includes("recall")) return "recall";
+  if (tipo.includes("liga")) return "ligacao";
+  if (tipo.includes("test")) return "test-drive";
+  if (tipo.includes("outro")) return "outros";
+
+  return "visita";
+};
+
+const Schedule = () => {
+  const { clients } = useAppContext();
+  const { t, language, dateLocale } = useLanguage();
+
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [month, setMonth] = useState<Date>(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+
+  const [form, setForm] = useState({
+    time: "",
+    client: "",
+    type: "visita" as AppointmentType,
+    description: "",
+  });
+
+  const dateStr = format(selectedDate, "yyyy-MM-dd");
+  const dateFormat =
+    language === "pt"
+      ? "d 'de' MMMM, yyyy"
+      : language === "es"
+        ? "d 'de' MMMM 'de' yyyy"
+        : language === "ja"
+          ? "yyyy年M月d日"
+          : "MMMM d, yyyy";
+  const formattedDate = format(selectedDate, dateFormat, { locale: dateLocale });
+
+  const carregarAgendamentos = useCallback(async () => {
+    try {
+      setLoadingAppointments(true);
+      const response = await fetch(`${API_URL}/agendamentos`);
+
+      if (!response.ok) {
+        throw new Error(t("Não foi possível carregar os agendamentos."));
+      }
+
+      const data: AppointmentApiResponse[] = await response.json();
+
+      const dadosFormatados: Appointment[] = data.map((item) => ({
+        id: item.id,
+        date: item.data,
+        time: item.horario?.substring(0, 5) || "",
+        client: item.cliente?.nome || t("Cliente não informado"),
+        clientId: item.cliente?.id,
+        type: mapTipoServico(item.tipoServico),
+        description: item.observacao || item.tipoServico || "",
+      }));
+
+      setAppointments(dadosFormatados);
+    } catch (error) {
+      console.error("Erro ao carregar agendamentos:", error);
+      toast.error(t("Erro ao carregar agendamentos."));
+    } finally {
+      setLoadingAppointments(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    void carregarAgendamentos();
+  }, [carregarAgendamentos]);
+
+  const dayAppointments = appointments
+    .filter((a) => a.date === dateStr)
+    .sort((a, b) => a.time.localeCompare(b.time));
+
+  const datesWithAppointments = [...new Set(appointments.map((a) => a.date))];
+  const bookedTimeSlots = new Set(
+    appointments
+      .filter((appointment) => appointment.date === dateStr)
+      .map((appointment) => appointment.time)
+  );
+
+  const handleSave = async () => {
+    if (!form.time || !form.client.trim()) {
+      toast.error(t("Preencha horário e cliente"));
+      return;
+    }
+
+    if (bookedTimeSlots.has(form.time)) {
+      toast.error(t("Esse horário já está reservado para a data selecionada."));
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const clienteSelecionado = clients.find(
+        (client) =>
+          client.name.trim().toLowerCase() ===
+          form.client.trim().toLowerCase()
+      );
+
+      const response = await fetch(`${API_URL}/agendamentos`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clienteId: clienteSelecionado?.id || 1,
+          data: dateStr,
+          horario: `${form.time}:00`,
+          tipoServico: typeConfig[form.type].label,
+          observacao: form.description,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(t("Não foi possível salvar o agendamento."));
+      }
+
+      await carregarAgendamentos();
+
+      toast.success(t("Agendamento criado!"));
+      setDialogOpen(false);
+      setForm({
+        time: "",
+        client: "",
+        type: "visita",
+        description: "",
+      });
+    } catch (error) {
+      console.error("Erro ao salvar agendamento:", error);
+      toast.error(t("Erro ao salvar agendamento."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const response = await fetch(`${API_URL}/agendamentos/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(t("Não foi possível remover o agendamento."));
+      }
+
+      await carregarAgendamentos();
+
+      setDeleteConfirm(null);
+      toast.success(t("Agendamento removido!"));
+    } catch (error) {
+      console.error("Erro ao excluir agendamento:", error);
+      toast.error(t("Erro ao remover agendamento."));
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <a
+        href="#agenda-conteudo"
+        className="sr-only rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground shadow focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:ring-2 focus:ring-ring"
+      >
+        {t("Ir para o conteúdo da agenda")}
+      </a>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="animate-reveal-up">
+          <h1 id="agenda-conteudo" tabIndex={-1} className="text-xl font-semibold">
+            {t("Agenda")}
+          </h1>
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {formattedDate}
+          </p>
+        </div>
+
+        <Button
+          onClick={() => setDialogOpen(true)}
+          aria-label={t("Novo agendamento para {date}", { date: formattedDate })}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.97] transition-all animate-reveal-up delay-1"
+        >
+          <Plus className="h-4 w-4 mr-1" /> {t("Novo agendamento")}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[auto_minmax(0,1fr)]">
+        <section
+          aria-labelledby="calendario-agenda-titulo"
+          className="rounded-lg border border-border bg-card p-2 animate-reveal-up delay-1 self-start"
+        >
+          <h2 id="calendario-agenda-titulo" className="sr-only">
+            {t("Calendário de agendamentos")}
+          </h2>
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(d) => d && setSelectedDate(d)}
+            month={month}
+            onMonthChange={setMonth}
+            locale={dateLocale}
+            className="pointer-events-auto"
+            disabled={(date) =>
+              date < new Date(new Date().setHours(0, 0, 0, 0))
+            }
+            modifiers={{
+              hasAppointment: datesWithAppointments.map(
+                (d) => new Date(d + "T12:00:00")
+              ),
+            }}
+            modifiersClassNames={{
+              hasAppointment: "border-2 border-primary/50",
+            }}
+          />
+          <div className="flex items-center gap-2 px-3 pb-2 text-xs text-muted-foreground">
+            <span
+              aria-hidden="true"
+              className="h-3 w-3 rounded-sm border-2 border-primary/50"
+            />
+            <span>{t("Dias com agendamentos")}</span>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="compromissos-titulo"
+          aria-busy={loadingAppointments}
+          className="space-y-3 animate-reveal-up delay-2"
+        >
+          <h2
+            id="compromissos-titulo"
+            aria-live="polite"
+            className="text-sm font-medium text-muted-foreground uppercase tracking-wider"
+          >
+            {t("Compromissos · {count}", { count: dayAppointments.length })}
+          </h2>
+
+          {loadingAppointments ? (
+            <p role="status" aria-live="polite" className="text-sm text-muted-foreground py-8 text-center">
+              {t("Carregando agendamentos...")}
+            </p>
+          ) : dayAppointments.length === 0 ? (
+            <p role="status" aria-live="polite" className="text-sm text-muted-foreground py-8 text-center">
+              {t("Nenhum compromisso neste dia.")}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {dayAppointments.map((a) => {
+                const config = typeConfig[a.type];
+                const Icon = config.icon;
+
+                return (
+                  <li
+                    key={a.id}
+                    className="p-4 rounded-lg border border-border bg-card hover:border-primary/30 transition-all"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="text-center shrink-0 pt-0.5">
+                        <p className="text-lg font-bold tabular-nums">
+                          {a.time}
+                        </p>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-sm">{a.client}</p>
+
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1 ${config.className}`}
+                          >
+                            <Icon aria-hidden="true" className="h-3 w-3" /> {t(config.label)}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          {a.description}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        aria-label={t("Excluir agendamento de {client} às {time}", { client: a.client, time: a.time })}
+                        onClick={() => setDeleteConfirm(a.id)}
+                        className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-destructive/15 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <Trash2 aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("Novo agendamento")}</DialogTitle>
+            <DialogDescription>
+              {t("Agende um compromisso para {date}.", { date: formattedDate })}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="agenda-horario">{t("Horário disponível")}</Label>
+              <Select
+                value={form.time}
+                onValueChange={(time) => setForm((current) => ({ ...current, time }))}
+              >
+                <SelectTrigger id="agenda-horario" aria-label={t("Selecionar horário disponível")}>
+                  <SelectValue placeholder={t("Selecione um horário")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_SLOTS.map((time) => (
+                    <SelectItem
+                      key={time}
+                      value={time}
+                      disabled={bookedTimeSlots.has(time)}
+                    >
+                      {time}{bookedTimeSlots.has(time) ? t(" — já reservado") : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {TIME_SLOTS.every((time) => bookedTimeSlots.has(time)) && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {t("Não há horários disponíveis para esta data.")}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agenda-cliente">{t("Cliente")}</Label>
+              <Input
+                id="agenda-cliente"
+                value={form.client}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    client: e.target.value,
+                  })
+                }
+                placeholder={t("Digite o nome do cliente")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agenda-tipo">{t("Tipo")}</Label>
+              <Select
+                value={form.type}
+                onValueChange={(value) => {
+                  if (isAppointmentType(value)) {
+                    setForm((current) => ({
+                      ...current,
+                      type: value,
+                    }));
+                  }
+                }}
+              >
+                <SelectTrigger id="agenda-tipo">
+                  <SelectValue />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="visita">{t("Visita")}</SelectItem>
+                  <SelectItem value="ligacao">{t("Ligação")}</SelectItem>
+                  <SelectItem value="test-drive">{t("Test Drive")}</SelectItem>
+                  <SelectItem value="retirada">{t("Retirada")}</SelectItem>
+                  <SelectItem value="revisao">{t("Revisão")}</SelectItem>
+                  <SelectItem value="recall">{t("Recall")}</SelectItem>
+                  <SelectItem value="outros">{t("Outros")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agenda-descricao">{t("Descrição")}</Label>
+              <Input
+                id="agenda-descricao"
+                value={form.description}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    description: e.target.value,
+                  })
+                }
+                placeholder={t("Detalhes do compromisso")}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              {t("Cancelar")}
+            </Button>
+
+            <Button
+              onClick={handleSave}
+              disabled={loading}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {loading ? t("Salvando...") : t("Salvar")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={() => setDeleteConfirm(null)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("Excluir agendamento")}</DialogTitle>
+            <DialogDescription>
+              {t("Tem certeza que deseja remover este compromisso?")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              {t("Cancelar")}
+            </Button>
+
+            <Button
+              variant="destructive"
+              aria-label={t("Confirmar exclusão do agendamento")}
+              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+            >
+              {t("Excluir")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default Schedule;
