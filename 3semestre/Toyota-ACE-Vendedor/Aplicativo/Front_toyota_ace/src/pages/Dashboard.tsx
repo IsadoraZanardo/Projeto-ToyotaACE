@@ -16,7 +16,9 @@ import { format } from "date-fns";
 import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const SALES_BLUE_THRESHOLD = 31;
+const SALES_BLUE_THRESHOLD = 15000;
+const AVERAGE_MONTHLY_SALES = 13300;
+const CHART_STEP = 5000;
 const LOW_SALES_COLOR = [203, 213, 225];
 const HIGH_SALES_COLOR = [30, 64, 175];
 
@@ -87,6 +89,12 @@ const FeaturedCarousel = () => {
 const Dashboard = () => {
   const { userName, selectedBranch, clients, appointments } = useAppContext();
   const { t, dateLocale, language } = useLanguage();
+  const numberLocale = { pt: "pt-BR", en: "en-US", es: "es-ES", ja: "ja-JP" }[language];
+  const numberFormatter = new Intl.NumberFormat(numberLocale);
+  const compactNumberFormatter = new Intl.NumberFormat(numberLocale, {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
   const todayFormat =
     language === "pt"
       ? "d 'de' MMMM, yyyy"
@@ -101,8 +109,8 @@ const Dashboard = () => {
   const conversionRate = clients.length > 0 ? Math.round((closedCount / clients.length) * 100) : 0;
   const todayAppointments = appointments.filter((a) => a.date === "2026-03-21").length;
   const chartMax = Math.max(
-    SALES_BLUE_THRESHOLD + 4,
-    Math.ceil(Math.max(...salesData.map(({ vendas }) => vendas)) / 5) * 5
+    SALES_BLUE_THRESHOLD + CHART_STEP,
+    Math.ceil(Math.max(...salesData.map(({ vendas }) => vendas)) / CHART_STEP) * CHART_STEP
   );
 
   const metrics = [
@@ -141,13 +149,13 @@ const Dashboard = () => {
       <div className="rounded-lg border border-border bg-card p-4 animate-reveal-up delay-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
           <div>
-            <h2 className="text-sm font-medium">{t("Desempenho de vendas")}</h2>
+            <h2 className="text-sm font-medium">{t("Vendas Toyota Brasil (estimativa)")}</h2>
             <p className="text-xs text-muted-foreground mt-1">
-              {t("Unidades vendidas por mês")}
+              {t("Unidades vendidas por mês (dados ilustrativos)")}
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{t("Poucas vendas")}</span>
+            <span>{t("Até 5.000 vendas")}</span>
             <span
               aria-hidden="true"
               className="h-2.5 w-20 rounded-full"
@@ -155,7 +163,7 @@ const Dashboard = () => {
                 background: `linear-gradient(90deg, rgb(${LOW_SALES_COLOR.join(", ")}), rgb(${HIGH_SALES_COLOR.join(", ")}))`,
               }}
             />
-            <span>{t("31+ vendas")}</span>
+            <span>{t("15.000+ vendas")}</span>
           </div>
         </div>
         <div className="h-60">
@@ -167,7 +175,8 @@ const Dashboard = () => {
                 allowDecimals={false}
                 axisLine={false}
                 domain={[0, chartMax]}
-                ticks={[0, 10, 20, 30, chartMax]}
+                ticks={[0, 5000, 10000, 15000, chartMax]}
+                tickFormatter={(value) => compactNumberFormatter.format(value)}
                 tick={{ fill: "hsl(0 0% 60%)", fontSize: 12 }}
                 tickLine={false}
               />
@@ -183,18 +192,20 @@ const Dashboard = () => {
                         {t("Mês: {month}", { month: String(label) })}
                       </p>
                       <p className="mt-1 text-sm font-medium">
-                        {payload[0].value} {t("vendas")}
+                        {numberFormatter.format(Number(payload[0].value))} {t("vendas")}
                       </p>
                     </div>
                   );
                 }}
               />
               <ReferenceLine
-                y={30}
+                y={AVERAGE_MONTHLY_SALES}
                 stroke="#4f75a2"
                 strokeDasharray="4 4"
                 label={{
-                  value: t("Meta: 30 vendas"),
+                  value: t("Referência mensal: ~{count} vendas", {
+                    count: numberFormatter.format(AVERAGE_MONTHLY_SALES),
+                  }),
                   fill: "#0003cb",
                   fontSize: 10,
                   position: "insideTopRight",
